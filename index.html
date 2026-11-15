@@ -491,6 +491,7 @@ function renderMeals(){
     box.append(h('div',{class:'meal'},
       h('div',{class:'meal-h'},h('b',{text:m.name}),armBtn('Remove',()=>del('meals',m._id))),
       h('div',{class:'meal-m'},m.type?h('span',{class:'pill',text:m.type}):null,m.mins?h('span',{text:m.mins+' min'}):null,stars,h('span',{text:m.last?'Last cooked '+nice(m.last):'Not cooked yet'})),
+      m.note?h('p',{class:'muted small',text:m.note}):null,
       h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')}))))))});
 }
 function ingRow(){const i=$('m-ings').children.length;
