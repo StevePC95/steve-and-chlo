@@ -532,6 +532,21 @@ $('dateline').textContent=new Date().toLocaleDateString('en-ZA',{weekday:'long',
 const mealById=id=>S.meals.find(m=>m._id===id);
 function shopItems(){const m={};DAYS.forEach(d=>{const p=S.plan[d.k],meal=p&&mealById(p.meal);if(!meal)return;(meal.ings||[]).forEach(i=>{if(!i||!i.n)return;const key=slug(i.n+'-'+(i.u||''));const o=m[key]||(m[key]={key,n:i.n,u:i.u||'',q:0,a:AISLES.includes(i.a)?i.a:'Other',from:[]});o.q+=Number(i.q)||0;if(!o.from.includes(meal.name))o.from.push(meal.name)})});return Object.values(m).sort((a,b)=>a.n.localeCompare(b.n))}
 function qty(o){if(!o.q)return '';const q=Math.round(o.q*100)/100;if(o.u==='g'&&q>=1000)return (q/1000)+' kg';if(o.u==='ml'&&q>=1000)return (q/1000)+' L';if(o.u==='each'||!o.u)return '× '+q;return q+' '+o.u}
+/* grams → ml for things they measure with a jug or spoon (Steve asked 21 Nov). g per ml; meat, veg and cheese blocks get no ml. */
+const DENS=[[/^(?:corn ?flour|maizena)\b/,0.5],[/^icing sugar\b/,0.5],[/^(?:light |dark )?brown sugar\b/,0.9],[/^(?:white |caster |castor |granulated )?sugar\b/,0.8],
+  [/^(?:cake |self[- ]?raising |plain |all[- ]purpose |bread |white |wholewheat |whole wheat )?flour\b/,0.56],
+  [/^(?:the )?(?:unsalted |salted |soft(?:ened)? |melted |cold )?butter\b(?!\s*(?:chicken|sauce|beans|milk))/,0.96],[/^peanut butter\b/,1.05],
+  [/^(?:basmati |jasmine |white |brown |long[- ]grain )?rice\b(?!\s*(?:noodles|paper|cakes))/,0.8],[/^cous[- ]?cous\b/,0.7],
+  [/^(?:greek |plain |double cream )?yog(?:h)?urt\b/,1.0],[/^cottage cheese\b/,0.95],[/^(?:cream cheese|sour cream|cr[eè]me fra[iî]che)\b/,1.0],
+  [/^grated (?:cheddar |mozzarella |parmesan )?cheese\b/,0.45],[/^(?:honey|golden syrup)\b/,1.4],[/^cocoa\b/,0.45],[/^(?:fine |table |sea )?salt\b/,1.2],
+  [/^(?:baking powder|baking soda|bicarb)/,0.9],[/^tomato (?:paste|pur[eé]e)\b/,1.1],[/^(?:rolled )?oats\b/,0.4],[/^(?:bread ?crumbs|panko)\b/,0.45]];
+function density(name){const s=String(name||'').trim().toLowerCase();for(const [re,d] of DENS)if(re.test(s))return d;return 0}
+function mlOf(g,name){const d=density(name);if(!d||!(g>0))return 0;const ml=g/d;return ml<20?Math.max(1,Math.round(ml)):ml<100?Math.round(ml/5)*5:Math.round(ml/10)*10}
+const fmtMl=ml=>ml>=1000?(Math.round(ml/100)/10)+' L':ml+' ml';
+function qtyMl(i){const base=qty({q:Number(i.q)||0,u:i.u}),ml=i.u==='g'?mlOf(Number(i.q),i.n):0;return ml?base+' ('+fmtMl(ml)+')':base}
+const ingLine=i=>[qtyMl(i),i.n].filter(Boolean).join(' ');
+/* same in step text: "250 g cake flour" → "250 g (450 ml) cake flour", "30 g of the butter" → "30 g (30 ml) of the butter" */
+const addMl=t=>String(t).replace(/(\d+(?:[.,]\d+)?)\s?(?:g|grams?)\b(?!\s*\()(\s+(?:of\s+(?:the\s+)?)?)([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ -]{0,30})/g,(all,n,mid,rest)=>{const ml=mlOf(parseFloat(n.replace(',','.')),rest);return ml?n+' g ('+fmtMl(ml)+')'+mid+rest:all});
 function choreDue(c){if(!c.lastMs)return 0;return (Number(c.every)||7)-Math.floor((Date.now()-c.lastMs)/864e5)}
 const mine=t=>!me||t.who===me||t.who==='both'||!t.who;
 function openTodos(){return S.todos.filter(t=>!t.done).sort((a,b)=>(a.due||'9999').localeCompare(b.due||'9999')||(a.atMs||0)-(b.atMs||0))}
@@ -607,7 +622,7 @@ function mealCard(m){
       h('div',{class:'meal-h'},h('b',{text:m.name}),armBtn('Remove',()=>del('meals',m._id))),
       h('div',{class:'meal-m'},m.type?h('span',{class:'pill',text:m.type}):null,m.mins?h('span',{text:m.mins+' min'}):null,stars,h('span',{text:m.last?'Last cooked '+nice(m.last):'Not cooked yet'}),h('a',{href:'#recipes/'+encodeURIComponent(m._id),style:'color:var(--steve);font-weight:600',text:(m.steps||[]).length?'Recipe':'Add steps'})),
       m.note?h('p',{class:'muted small',text:m.note}):null,
-      h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')})))));
+      h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:ingLine(i)})))));
 }
 function renderMeals(){
   const box=$('meal-list');box.textContent='';
@@ -693,12 +708,12 @@ function renderRecipes(){
     ck.append(h('div',{class:'tm'+(left<=0?' ring':'')},h('div',{style:'display:flex;flex-direction:column;flex:1;min-width:0'},h('small',{style:'font-weight:700',text:String(TM[k].label).split(' · ')[0]+' timer'}),h('b',{'data-tm':k,text:left<=0?'Done!':fmt(left)})),
       h('button',{type:'button',class:'btn',text:'Stop',onclick:()=>stopTimer(k)})))});
   if((m.ings||[]).length||m.note)ck.append(h('div',{class:'card'},h('details',{open:at===0&&!TM[m._id+'|0']?true:null},h('summary',{text:'You need'+((m.ings||[]).length?' ('+m.ings.length+')':'')}),
-    h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')}))),m.note?h('p',{class:'muted small',style:'margin-top:8px',text:m.note}):null)));
+    h('ul',null,(m.ings||[]).map(i=>h('li',{text:ingLine(i)}))),m.note?h('p',{class:'muted small',style:'margin-top:8px',text:m.note}):null)));
   if(steps.length){const s=steps[at],key=m._id+'|'+at,mins=Number(s.m)||0;
     ck.append(h('div',{class:'card'},
       h('div',{class:'dots-steps',role:'group','aria-label':'Jump to a step'},steps.map((_,i)=>h('button',{type:'button',class:i===at?'cur':i<at?'done':'','aria-label':'Step '+(i+1),text:String(i+1),onclick:()=>goStep(m,i)}))),
       h('span',{class:'stepnum',text:'Step '+(at+1)}),
-      h('p',{class:'steptx',text:s.t}),
+      h('p',{class:'steptx',text:addMl(s.t)}),
       mins?(TM[key]?h('p',{class:'muted small',text:'Timer running above. You can carry on.'}):h('button',{type:'button',class:'btn accent',text:'Start '+mins+' min timer',onclick:()=>startTimer(key,mins,'Step '+(at+1)+' · '+m.name,recipeHref(m._id))})):null,
       h('div',{class:'row'},
         h('button',{type:'button',class:'btn ghost',text:'‹ Back',disabled:at===0,onclick:()=>goStep(m,at-1)}),
