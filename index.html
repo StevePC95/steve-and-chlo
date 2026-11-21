@@ -194,6 +194,13 @@ nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;padding
 nav.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs a[aria-current="page"]{color:var(--ink)}
 nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--chlo)}
+/* A–Z library index: letter bar sticks to the top of the screen while the list scrolls */
+.az{position:sticky;top:0;z-index:3;background:var(--card);display:flex;flex-wrap:wrap;gap:3px;padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:-4px}
+.az button{flex:1 0 29px;max-width:46px;min-width:29px;height:38px;padding:0;border-radius:10px;border:1.5px solid var(--line-2);background:transparent;color:var(--ink);font:800 .95rem/1 var(--f-d);cursor:pointer;display:grid;place-items:center}
+.az button:active,.az button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.az svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.az-h{font:800 1.1rem/1 var(--f-d);color:var(--chlo);margin:16px 0 0;padding-bottom:4px;border-bottom:2px solid var(--chlo-soft)}
+.az-h:first-child{margin-top:6px}
 /* recipe book + cook mode */
 .rb li{padding:0;align-items:stretch}
 .rb a{flex:1;display:flex;align-items:center;gap:12px;padding:12px 0;color:inherit;text-decoration:none;min-width:0}
@@ -312,7 +319,11 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
     <p class="muted small">Tap the circle to say who cooks. Tick a day once it's cooked, so suggestions stop repeating it.</p>
   </div>
   <div class="head"><h2>Our meals</h2><span class="eyebrow" id="meal-count"></span></div>
-  <div class="card"><div id="meal-list"></div></div>
+  <div class="card">
+    <input class="in" id="meal-q" type="search" placeholder="Find a meal or ingredient…" autocomplete="off" aria-label="Search our meals" style="flex:none">
+    <div class="az" id="meal-az" role="navigation" aria-label="Jump to letter" hidden></div>
+    <div id="meal-list"></div>
+  </div>
   <div class="card">
     <span class="eyebrow">Add a meal</span>
     <form id="meal-form" style="display:flex;flex-direction:column;gap:10px">
@@ -356,7 +367,7 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
   <div id="rb-home" style="display:flex;flex-direction:column;gap:16px">
     <div class="head"><h2>Recipe book</h2><span class="eyebrow" id="rb-count"></span></div>
     <input class="in" id="rb-q" type="search" placeholder="Find a meal or ingredient…" autocomplete="off" aria-label="Search recipes" style="flex:none">
-    <div class="card"><ul class="list rb" id="rb-list"></ul></div>
+    <div class="card"><div class="az" id="rb-az" role="navigation" aria-label="Jump to letter" hidden></div><div id="rb-list"></div></div>
     <p class="muted small">Tap a meal to cook it step by step. Steps with a time get a timer.</p>
   </div>
   <div id="cook" hidden style="display:flex;flex-direction:column;gap:16px"></div>
@@ -573,17 +584,40 @@ function renderPlan(){
     box.append(h('div',{class:'day'+(d.k===dk?' today':'')},h('span',{class:'dn',text:d.n}),sel,cook,ck))});
   $('plan-count').textContent=n+' of 5 picked';
 }
-function renderMeals(){
-  const box=$('meal-list');box.textContent='';$('meal-count').textContent=S.meals.length+' in the library';
-  if(!S.meals.length)box.append(h('p',{class:'empty',text:loaded.meals?'No meals yet. Add your first one below.':'Loading…'}));
-  S.meals.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name))).forEach(m=>{
+/* A–Z index shared by the meal library and the recipe book */
+const byName=(a,b)=>String(a.name).localeCompare(String(b.name));
+const letterOf=s=>{const c=String(s||'').trim().charAt(0).toUpperCase();return c>='A'&&c<='Z'?c:'#'};
+const mealMatch=(m,q)=>!q||[m.name,m.type,m.note].concat((m.ings||[]).map(i=>i.n)).join(' ').toLowerCase().includes(q);
+function azRender(barId,boxId,searchId,meals,prefix,groupFn){
+  const bar=$(barId),box=$(boxId),groups=[];
+  meals.forEach(m=>{const l=letterOf(m.name);let g=groups[groups.length-1];if(!g||g.l!==l)groups.push(g={l,ms:[]});g.ms.push(m)});
+  bar.textContent='';bar.hidden=meals.length<6&&!$(searchId).value;
+  const sb=h('button',{type:'button','aria-label':'Search',title:'Search',onclick:()=>{const s=$(searchId);s.scrollIntoView({block:'center'});s.focus()}});
+  sb.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>';
+  bar.append(sb);
+  groups.forEach(g=>{const id=prefix+g.l;
+    bar.append(h('button',{type:'button','aria-label':'Jump to '+g.l,text:g.l,onclick:()=>{const t=document.getElementById(id);if(!t)return;
+      const y=t.getBoundingClientRect().top+window.scrollY-bar.offsetHeight-8;
+      window.scrollTo({top:Math.max(0,y),behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}}));
+    box.append(h('h3',{class:'az-h',id,text:g.l}),groupFn(g.ms))});
+}
+function mealCard(m){
     const stars=h('span',{class:'stars',role:'group','aria-label':'Rating'},[1,2,3,4,5].map(i=>h('button',{type:'button',class:i<=(m.rating||0)?'on':'','aria-label':i+' star'+(i>1?'s':''),text:'★',onclick:()=>upd('meals',m._id,{rating:m.rating===i?0:i})})));
-    box.append(h('div',{class:'meal'},
+    return h('div',{class:'meal'},
       h('div',{class:'meal-h'},h('b',{text:m.name}),armBtn('Remove',()=>del('meals',m._id))),
       h('div',{class:'meal-m'},m.type?h('span',{class:'pill',text:m.type}):null,m.mins?h('span',{text:m.mins+' min'}):null,stars,h('span',{text:m.last?'Last cooked '+nice(m.last):'Not cooked yet'}),h('a',{href:'#recipes/'+encodeURIComponent(m._id),style:'color:var(--steve);font-weight:600',text:(m.steps||[]).length?'Recipe':'Add steps'})),
       m.note?h('p',{class:'muted small',text:m.note}):null,
-      h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')}))))))});
+      h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')})))));
 }
+function renderMeals(){
+  const box=$('meal-list');box.textContent='';
+  const q=$('meal-q').value.trim().toLowerCase(),all=S.meals.slice().sort(byName),list=all.filter(m=>mealMatch(m,q));
+  $('meal-count').textContent=q?list.length+' of '+all.length+' match':all.length+' in the library';
+  if(!all.length)box.append(h('p',{class:'empty',text:loaded.meals?'No meals yet. Add your first one below.':'Loading…'}));
+  else if(!list.length)box.append(h('p',{class:'empty',text:'Nothing matches that. Try another word, or add it as a new meal below.'}));
+  azRender('meal-az','meal-list','meal-q',list,'lib-',ms=>h('div',null,ms.map(mealCard)));
+}
+$('meal-q').addEventListener('input',renderMeals);
 function ingRow(){const i=$('m-ings').children.length;
   $('m-ings').append(h('div',{class:'ing'},
     h('input',{class:'in',id:'ing-n-'+i,placeholder:'Ingredient','aria-label':'Ingredient',maxlength:'40'}),
@@ -642,13 +676,12 @@ function renderRecipes(){
   const onView=(location.hash||'').slice(1).split('/')[0]==='recipes';
   home.hidden=!!cookId;ck.hidden=!cookId;
   wake(onView&&!!m&&!!(m.steps||[]).length);
-  const q=$('rb-q').value.trim().toLowerCase(),ul=$('rb-list');ul.textContent='';
-  const all=S.meals.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
-  $('rb-count').textContent=all.filter(x=>(x.steps||[]).length).length+' of '+all.length+' with steps';
-  const list=all.filter(x=>!q||[x.name,x.type].concat((x.ings||[]).map(i=>i.n)).join(' ').toLowerCase().includes(q));
-  if(!list.length)ul.append(h('li',{class:'empty',text:!loaded.meals?'Loading…':q?'Nothing matches that.':'No meals yet.'}));
-  list.forEach(x=>{const n=(x.steps||[]).length;
-    ul.append(h('li',null,h('a',{href:recipeHref(x._id)},h('div',{class:'tx'},h('b',{text:x.name}),h('small',{text:[x.type,x.mins?x.mins+' min':null,n?n+' steps':'No steps yet'].filter(Boolean).join(' · ')})))))});
+  const q=$('rb-q').value.trim().toLowerCase(),box=$('rb-list');box.textContent='';
+  const all=S.meals.slice().sort(byName),list=all.filter(x=>mealMatch(x,q));
+  $('rb-count').textContent=q?list.length+' of '+all.length+' match':all.filter(x=>(x.steps||[]).length).length+' of '+all.length+' with steps';
+  if(!list.length)box.append(h('p',{class:'empty',text:!loaded.meals?'Loading…':q?'Nothing matches that. Try another word.':'No meals yet.'}));
+  azRender('rb-az','rb-list','rb-q',list,'rb-',ms=>h('ul',{class:'list rb'},ms.map(x=>{const n=(x.steps||[]).length;
+    return h('li',null,h('a',{href:recipeHref(x._id)},h('div',{class:'tx'},h('b',{text:x.name}),h('small',{text:[x.type,x.mins?x.mins+' min':null,n?n+' steps':'No steps yet'].filter(Boolean).join(' · ')}))))})));
   if(!cookId)return;
   const ae=document.activeElement;if(ae&&ae.tagName==='TEXTAREA'&&ck.contains(ae))return;
   ck.textContent='';
