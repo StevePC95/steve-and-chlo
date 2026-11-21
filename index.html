@@ -194,6 +194,27 @@ nav.tabs a{display:flex;flex-direction:column;align-items:center;gap:3px;padding
 nav.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 nav.tabs a[aria-current="page"]{color:var(--ink)}
 nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--chlo)}
+/* recipe book + cook mode */
+.rb li{padding:0;align-items:stretch}
+.rb a{flex:1;display:flex;align-items:center;gap:12px;padding:12px 0;color:inherit;text-decoration:none;min-width:0}
+.rb a::after{content:"›";font:700 1.4rem/1 var(--f-d);color:var(--muted)}
+.back{color:var(--muted);font-weight:600;text-decoration:none;align-self:flex-start;padding:6px 0;min-height:36px}
+.stepnum{font:800 1.05rem/1 var(--f-d);color:var(--chlo)}
+.steptx{font:500 1.3rem/1.4 var(--f-b);overflow-wrap:anywhere}
+.dots-steps{display:flex;gap:5px;flex-wrap:wrap}
+.dots-steps button{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line-2);background:transparent;color:var(--muted);font:700 .8rem/1 var(--f-b);cursor:pointer}
+.dots-steps button.done{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.dots-steps button.cur{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.tm{display:flex;align-items:center;gap:12px;border-radius:14px;padding:12px 14px;background:var(--steve-soft);color:var(--steve)}
+.tm b{font:800 2rem/1 var(--f-d);font-variant-numeric:tabular-nums;flex:1}
+.tm.ring{background:var(--chlo);color:#fff}
+.tm .btn{background:var(--steve);color:var(--on)}
+.tm.ring .btn{background:#fff;color:var(--chlo)}
+.tbar{position:fixed;left:16px;right:16px;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:7;max-width:608px;margin:0 auto;display:flex;flex-direction:column;gap:6px}
+.tbar a{display:flex;justify-content:space-between;gap:10px;background:var(--steve);color:var(--on);padding:10px 14px;border-radius:12px;font-weight:700;text-decoration:none;box-shadow:0 8px 20px rgba(0,0,0,.22)}
+.tbar a.ring{background:var(--chlo);color:#fff}
+.tbar a span:last-child{font-variant-numeric:tabular-nums}
+textarea.in{min-height:180px;resize:vertical;line-height:1.45}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:9;max-width:608px;margin:0 auto;background:var(--bad);color:#fff;padding:12px 14px;border-radius:12px;font-size:.92rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion: no-preference){
   section[data-view]:not([hidden]){animation:rise .2s ease-out}
@@ -280,7 +301,7 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
 </section>
 
 <section data-view="meals" hidden>
-  <div class="sub" role="navigation" aria-label="Meals sections"><a href="#meals" aria-current="page">This week</a><a href="#shop">Shopping</a></div>
+  <div class="sub" role="navigation" aria-label="Meals sections"><a href="#meals" aria-current="page">This week</a><a href="#shop">Shopping</a><a href="#recipes">Recipes</a></div>
   <div class="head"><h2>This week</h2><span class="eyebrow" id="plan-count"></span></div>
   <div class="card">
     <div id="plan"></div>
@@ -297,7 +318,7 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
     <form id="meal-form" style="display:flex;flex-direction:column;gap:10px">
       <div class="row">
         <input class="in" id="m-name" placeholder="Meal name" maxlength="60" required>
-        <select class="in sm" id="m-type" aria-label="Type"><option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Vegetarian</option><option>Other</option></select>
+        <select class="in sm" id="m-type" aria-label="Type"><option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Vegetarian</option><option>Treat</option><option>Other</option></select>
         <input class="in sm" id="m-mins" type="number" min="5" max="300" placeholder="Mins" aria-label="Minutes">
       </div>
       <span class="eyebrow">Ingredients for 2 (name, amount, unit, aisle)</span>
@@ -311,7 +332,7 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
 </section>
 
 <section data-view="shop" hidden>
-  <div class="sub" role="navigation" aria-label="Meals sections"><a href="#meals">This week</a><a href="#shop" aria-current="page">Shopping</a></div>
+  <div class="sub" role="navigation" aria-label="Meals sections"><a href="#meals">This week</a><a href="#shop" aria-current="page">Shopping</a><a href="#recipes">Recipes</a></div>
   <div class="head"><h2>Shopping</h2><span class="eyebrow" id="shop-from"></span></div>
   <div class="prog"><div class="bar"><i id="shop-bar"></i></div><span id="shop-count">0 / 0</span></div>
   <div class="card"><div id="shop-list"></div></div>
@@ -328,6 +349,17 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
     <button class="del" type="button" id="new-week" style="min-height:46px;padding:0 16px;font-size:.9rem">Start a new week</button>
   </div>
   <p class="muted small">Amounts are for 2 people. Oil, salt and spices are left off. Starting a new week clears the plan, the ticks and anything ticked under Also need.</p>
+</section>
+
+<section data-view="recipes" hidden>
+  <div class="sub" role="navigation" aria-label="Meals sections"><a href="#meals">This week</a><a href="#shop">Shopping</a><a href="#recipes" aria-current="page">Recipes</a></div>
+  <div id="rb-home" style="display:flex;flex-direction:column;gap:16px">
+    <div class="head"><h2>Recipe book</h2><span class="eyebrow" id="rb-count"></span></div>
+    <input class="in" id="rb-q" type="search" placeholder="Find a meal or ingredient…" autocomplete="off" aria-label="Search recipes" style="flex:none">
+    <div class="card"><ul class="list rb" id="rb-list"></ul></div>
+    <p class="muted small">Tap a meal to cook it step by step. Steps with a time get a timer.</p>
+  </div>
+  <div id="cook" hidden style="display:flex;flex-direction:column;gap:16px"></div>
 </section>
 
 <section data-view="todo" hidden>
@@ -402,6 +434,7 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
 
 </div></main>
 
+<div class="tbar" id="tbar" aria-live="polite"></div>
 <div class="toast" id="toast" role="alert" hidden></div>
 
 <nav class="tabs" aria-label="Sections"><div>
@@ -471,10 +504,13 @@ function av(who,tag){return h(tag||'span',{class:'av '+(NAME[who]?who:'none'),te
 
 /* ---- routing ---- */
 const views=[...document.querySelectorAll('section[data-view]')],links=[...document.querySelectorAll('nav.tabs a')];
-function show(){if(!$('gate').hidden)return;let v=(location.hash||'#today').slice(1);if(!views.some(x=>x.dataset.view===v))v='today';
+let cookId=null;
+function show(){if(!$('gate').hidden)return;let v=(location.hash||'#today').slice(1);const parts=v.split('/');v=parts[0];
+  cookId=v==='recipes'&&parts[1]?decodeURIComponent(parts.slice(1).join('/')):null;
+  if(!views.some(x=>x.dataset.view===v))v='today';
   views.forEach(x=>{x.hidden=x.dataset.view!==v});
-  const tab=v==='shop'?'meals':v;links.forEach(a=>{if(a.getAttribute('href')==='#'+tab)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}
-window.addEventListener('hashchange',()=>{show();window.scrollTo(0,0)});show();
+  const tab=v==='shop'||v==='recipes'?'meals':v;links.forEach(a=>{if(a.getAttribute('href')==='#'+tab)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}
+window.addEventListener('hashchange',()=>{show();renderRecipes();window.scrollTo(0,0)});show();
 
 /* ---- who ---- */
 function renderWho(){document.querySelectorAll('.who button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.who===me?'true':'false'))}
@@ -503,6 +539,7 @@ function renderToday(){
   if(meal){tn.append(h('b',{text:meal.name}),h('span',{text:[meal.mins?meal.mins+' min':null,p.cook&&NAME[p.cook]?NAME[p.cook]+' is cooking':'Nobody picked to cook yet',p.cooked?'Cooked':null].filter(Boolean).join(' · ')}))}
   else{const nxt=DAYS.map(d=>({d,m:S.plan[d.k]&&mealById(S.plan[d.k].meal)})).find(x=>x.m&&DKEY.indexOf(x.d.k)>new Date().getDay());
     tn.append(h('b',{text:dk==='sat'||dk==='sun'?'Weekend. No plan needed.':'Nothing planned'}),h('span',{text:nxt?'Next up: '+nxt.m.name+' on '+nxt.d.n:'The week is still empty.'}))}
+  if(meal&&(meal.steps||[]).length)tn.append(h('a',{href:'#recipes/'+encodeURIComponent(meal._id),text:'Cook it step by step'}));
   tn.append(h('a',{href:'#meals',text:meal?'See the week':'Plan the week'}));
   const open=openTodos().filter(mine),late=open.filter(t=>t.due&&daysTo(t.due)<=0).length;
   const items=shopItems(),left=items.filter(i=>!S.ticks[i.key]).length+S.extras.filter(x=>!x.done).length;
@@ -543,7 +580,7 @@ function renderMeals(){
     const stars=h('span',{class:'stars',role:'group','aria-label':'Rating'},[1,2,3,4,5].map(i=>h('button',{type:'button',class:i<=(m.rating||0)?'on':'','aria-label':i+' star'+(i>1?'s':''),text:'★',onclick:()=>upd('meals',m._id,{rating:m.rating===i?0:i})})));
     box.append(h('div',{class:'meal'},
       h('div',{class:'meal-h'},h('b',{text:m.name}),armBtn('Remove',()=>del('meals',m._id))),
-      h('div',{class:'meal-m'},m.type?h('span',{class:'pill',text:m.type}):null,m.mins?h('span',{text:m.mins+' min'}):null,stars,h('span',{text:m.last?'Last cooked '+nice(m.last):'Not cooked yet'})),
+      h('div',{class:'meal-m'},m.type?h('span',{class:'pill',text:m.type}):null,m.mins?h('span',{text:m.mins+' min'}):null,stars,h('span',{text:m.last?'Last cooked '+nice(m.last):'Not cooked yet'}),h('a',{href:'#recipes/'+encodeURIComponent(m._id),style:'color:var(--steve);font-weight:600',text:(m.steps||[]).length?'Recipe':'Add steps'})),
       m.note?h('p',{class:'muted small',text:m.note}):null,
       h('details',null,h('summary',{text:(m.ings||[]).length+' ingredients'}),h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')}))))))});
 }
@@ -560,13 +597,87 @@ $('meal-form').addEventListener('submit',e=>{e.preventDefault();const name=$('m-
   add('meals',{name,type:$('m-type').value,mins:Number($('m-mins').value)||0,rating:0,last:'',ings,atMs:Date.now()}).then(()=>{$('meal-form').reset();$('m-ings').textContent='';for(let i=0;i<4;i++)ingRow()})});
 $('suggest').addEventListener('click',()=>{
   if(S.meals.length<1)return toast('Add some meals first.');
-  const scored=S.meals.map(m=>({m,s:(m.last?Math.min(60,-daysTo(m.last)):45)+(m.rating||3)*6+Math.random()*25})).sort((a,b)=>b.s-a.s);
+  const scored=S.meals.filter(m=>m.type!=='Treat').map(m=>({m,s:(m.last?Math.min(60,-daysTo(m.last)):45)+(m.rating||3)*6+Math.random()*25})).sort((a,b)=>b.s-a.s);
   const pick=[],types={};
   scored.forEach(x=>{if(pick.length>=5)return;const t=x.m.type||'Other';if((types[t]||0)>=2)return;types[t]=(types[t]||0)+1;pick.push(x.m)});
   scored.forEach(x=>{if(pick.length<5&&!pick.includes(x.m))pick.push(x.m)});
   const btn=$('suggest');btn.disabled=true;let i=0;
   (function next(){if(i>=DAYS.length||i>=pick.length){btn.disabled=false;return}const d=DAYS[i],m=pick[i++];put('plan',d.k,{meal:m._id,cook:(S.plan[d.k]||{}).cook||'',cooked:false}).then(next)})();
 });
+
+/* ---- Recipe book + cook mode (steps live on the meal: steps:[{t,m}], m = minutes for a timer) ---- */
+const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+pad(s%60)};
+function minsOf(t){const r=String(t).match(/\d+(?:[.,]\d+)?\s*(?:minutes|mins|min)\b/gi);if(!r)return 0;const n=parseFloat(r[r.length-1].replace(',','.'));return n>0&&n<=600?n:0}
+const stepsToText=st=>(st||[]).map(s=>s.t+(s.m&&!minsOf(s.t)?' ('+s.m+' min)':'')).join('\n');
+const textToSteps=txt=>String(txt).split('\n').map(l=>l.replace(/^\s*(?:\d+[.)]|[-•*])\s*/,'').trim()).filter(Boolean).slice(0,30).map(t=>({t:t.slice(0,400),m:minsOf(t)}));
+const recipeHref=id=>'#recipes/'+encodeURIComponent(id);
+let TM={},stepAt={},actx=null,lastBeep=0,wl=null;
+try{TM=JSON.parse(localStorage.getItem('sc-timers')||'{}')||{}}catch(e){TM={}}
+try{stepAt=JSON.parse(localStorage.getItem('sc-steps')||'{}')||{}}catch(e){stepAt={}}
+function saveTM(){try{localStorage.setItem('sc-timers',JSON.stringify(TM))}catch(e){}}
+function setStep(id,i){stepAt[id]=i;try{localStorage.setItem('sc-steps',JSON.stringify(stepAt))}catch(e){}}
+function unlockAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume()}catch(e){}}
+function beep(){
+  try{if(actx){const t0=actx.currentTime;[0,.35,.7].forEach(d=>{const o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=880;
+    g.gain.setValueAtTime(.0001,t0+d);g.gain.exponentialRampToValueAtTime(.25,t0+d+.02);g.gain.exponentialRampToValueAtTime(.0001,t0+d+.25);o.connect(g);g.connect(actx.destination);o.start(t0+d);o.stop(t0+d+.3)})}}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([300,150,300,150,300])}catch(e){}}
+function wake(on){try{if(on&&!wl&&navigator.wakeLock&&!document.hidden){wl='asking';navigator.wakeLock.request('screen').then(l=>{wl=l;l.addEventListener('release',()=>{wl=null})}).catch(()=>{wl=null})}
+  if(!on&&wl&&wl.release){wl.release();wl=null}}catch(e){wl=null}}
+function startTimer(key,mins,label,href){unlockAudio();TM[key]={end:Date.now()+mins*60000,label,href};saveTM();renderRecipes();tick()}
+function stopTimer(key){delete TM[key];saveTM();renderRecipes();tick()}
+function tick(){const now=Date.now();let ringing=false;
+  Object.keys(TM).forEach(k=>{if(now>=TM[k].end){if(now-TM[k].end>10*60000){delete TM[k];saveTM()}else ringing=true}});
+  if(ringing&&now-lastBeep>3500){lastBeep=now;beep()}
+  document.querySelectorAll('[data-tm]').forEach(el=>{const t=TM[el.dataset.tm];if(!t)return;const left=(t.end-now)/1000;el.textContent=left<=0?'Done!':fmt(left);const box=el.closest('.tm');if(box)box.classList.toggle('ring',left<=0)});
+  const bar=$('tbar'),keys=Object.keys(TM).filter(k=>TM[k].href!==location.hash);
+  if(!keys.length&&!bar.childElementCount)return;
+  bar.textContent='';
+  document.body.style.paddingBottom=keys.length?'calc('+(96+keys.length*50)+'px + env(safe-area-inset-bottom,0px))':'';
+  keys.sort((a,b)=>TM[a].end-TM[b].end).forEach(k=>{const t=TM[k],left=(t.end-now)/1000;
+    bar.append(h('a',{href:t.href,class:left<=0?'ring':''},h('span',{text:t.label}),h('span',{text:left<=0?'Done!':fmt(left)})))})}
+setInterval(tick,1000);
+function goStep(m,i){setStep(m._id,i);renderRecipes();window.scrollTo(0,0)}
+function renderRecipes(){
+  const home=$('rb-home'),ck=$('cook'),m=cookId&&mealById(cookId);
+  const onView=(location.hash||'').slice(1).split('/')[0]==='recipes';
+  home.hidden=!!cookId;ck.hidden=!cookId;
+  wake(onView&&!!m&&!!(m.steps||[]).length);
+  const q=$('rb-q').value.trim().toLowerCase(),ul=$('rb-list');ul.textContent='';
+  const all=S.meals.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
+  $('rb-count').textContent=all.filter(x=>(x.steps||[]).length).length+' of '+all.length+' with steps';
+  const list=all.filter(x=>!q||[x.name,x.type].concat((x.ings||[]).map(i=>i.n)).join(' ').toLowerCase().includes(q));
+  if(!list.length)ul.append(h('li',{class:'empty',text:!loaded.meals?'Loading…':q?'Nothing matches that.':'No meals yet.'}));
+  list.forEach(x=>{const n=(x.steps||[]).length;
+    ul.append(h('li',null,h('a',{href:recipeHref(x._id)},h('div',{class:'tx'},h('b',{text:x.name}),h('small',{text:[x.type,x.mins?x.mins+' min':null,n?n+' steps':'No steps yet'].filter(Boolean).join(' · ')})))))});
+  if(!cookId)return;
+  const ae=document.activeElement;if(ae&&ae.tagName==='TEXTAREA'&&ck.contains(ae))return;
+  ck.textContent='';
+  ck.append(h('a',{class:'back',href:'#recipes',text:'‹ All recipes'}));
+  if(!m){ck.append(h('p',{class:'empty',text:loaded.meals?'That meal is not in the library any more.':'Loading…'}));return}
+  const steps=m.steps||[],at=Math.max(0,Math.min(Number(stepAt[m._id])||0,steps.length-1));
+  ck.append(h('div',{class:'head'},h('h2',{text:m.name}),h('span',{class:'eyebrow',text:[m.mins?m.mins+' min':null,steps.length?'Step '+(at+1)+' of '+steps.length:null].filter(Boolean).join(' · ')})));
+  Object.keys(TM).filter(k=>k.split('|')[0]===m._id).sort((a,b)=>TM[a].end-TM[b].end).forEach(k=>{const left=(TM[k].end-Date.now())/1000;
+    ck.append(h('div',{class:'tm'+(left<=0?' ring':'')},h('div',{style:'display:flex;flex-direction:column;flex:1;min-width:0'},h('small',{style:'font-weight:700',text:String(TM[k].label).split(' · ')[0]+' timer'}),h('b',{'data-tm':k,text:left<=0?'Done!':fmt(left)})),
+      h('button',{type:'button',class:'btn',text:'Stop',onclick:()=>stopTimer(k)})))});
+  if((m.ings||[]).length||m.note)ck.append(h('div',{class:'card'},h('details',{open:at===0&&!TM[m._id+'|0']?true:null},h('summary',{text:'You need'+((m.ings||[]).length?' ('+m.ings.length+')':'')}),
+    h('ul',null,(m.ings||[]).map(i=>h('li',{text:[qty({q:Number(i.q)||0,u:i.u}),i.n].filter(Boolean).join(' ')}))),m.note?h('p',{class:'muted small',style:'margin-top:8px',text:m.note}):null)));
+  if(steps.length){const s=steps[at],key=m._id+'|'+at,mins=Number(s.m)||0;
+    ck.append(h('div',{class:'card'},
+      h('div',{class:'dots-steps',role:'group','aria-label':'Jump to a step'},steps.map((_,i)=>h('button',{type:'button',class:i===at?'cur':i<at?'done':'','aria-label':'Step '+(i+1),text:String(i+1),onclick:()=>goStep(m,i)}))),
+      h('span',{class:'stepnum',text:'Step '+(at+1)}),
+      h('p',{class:'steptx',text:s.t}),
+      mins?(TM[key]?h('p',{class:'muted small',text:'Timer running above. You can carry on.'}):h('button',{type:'button',class:'btn accent',text:'Start '+mins+' min timer',onclick:()=>startTimer(key,mins,'Step '+(at+1)+' · '+m.name,recipeHref(m._id))})):null,
+      h('div',{class:'row'},
+        h('button',{type:'button',class:'btn ghost',text:'‹ Back',disabled:at===0,onclick:()=>goStep(m,at-1)}),
+        at<steps.length-1?h('button',{type:'button',class:'btn',style:'flex:1',text:'Next step ›',onclick:()=>goStep(m,at+1)})
+          :h('button',{type:'button',class:'btn',style:'flex:1',text:'Done! Mark as cooked',onclick:()=>{upd('meals',m._id,{last:today()});setStep(m._id,0);location.hash='#recipes'}}))))}
+  const ta=h('textarea',{class:'in',id:'steps-in','aria-label':'Steps, one per line',placeholder:'Heat the pan…\nCook 5 min each side…'});ta.value=stepsToText(steps);
+  const form=h('form',{style:'display:flex;flex-direction:column;gap:10px;margin-top:10px',onsubmit:e=>{e.preventDefault();const st=textToSteps(ta.value);ta.blur();setStep(m._id,0);upd('meals',m._id,{steps:st})}},
+    ta,h('p',{class:'muted small',text:'One step per line. Put a time like "5 min" in a step and it gets a timer.'}),h('button',{class:'btn',type:'submit',text:'Save steps'}));
+  ck.append(h('div',{class:'card'},steps.length?h('details',null,h('summary',{text:'Change the steps'}),form):[h('span',{class:'eyebrow',text:'No steps yet'}),form]));
+}
+$('rb-q').addEventListener('input',renderRecipes);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){wl=null;renderRecipes()}});
 
 /* ---- Shop ---- */
 function renderShop(){
@@ -699,7 +810,7 @@ $('ev-form').addEventListener('submit',e=>{e.preventDefault();const v=$('ev-text
   calSel=d;calY=+d.slice(0,4);calM=+d.slice(5,7)-1;
   add('events',{t:v,date:d,time:t,who:evWho,rep:r,atMs:Date.now(),by:me||''})});
 
-function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal()}
+function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal();renderRecipes()}
 renderAll();
 
 /* ---- connect ---- */
