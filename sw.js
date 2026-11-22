@@ -1,5 +1,6 @@
 // Steve & Chlo service worker: only shows push reminders. It does not cache pages,
 // so the app always loads fresh from the site.
+importScripts('config.js');
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
@@ -18,9 +19,19 @@ self.addEventListener('push', e => {
   // Tell any open copy of the app that the push arrived (or why it could not be shown).
   const tell = msg => self.clients.matchAll({ type: 'window', includeUncontrolled: true })
     .then(list => list.forEach(c => c.postMessage(msg)));
+  // Also tell the server this phone got it (sc_push_seen), so a missing push can be traced.
+  const seen = err => self.registration.pushManager.getSubscription().then(s => {
+    const C = self.SC_CONFIG || {};
+    if (!s || !C.supabaseUrl) return;
+    return fetch(C.supabaseUrl + '/rest/v1/rpc/sc_push_seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey },
+      body: JSON.stringify({ p_endpoint: s.endpoint, p_err: err || null }),
+    });
+  }).catch(() => {});
   e.waitUntil(self.registration.showNotification(title, opts)
-    .then(() => tell({ pushed: d.tag || '' }))
-    .catch(err => tell({ pushed: d.tag || '', err: String(err) })));
+    .then(() => Promise.all([tell({ pushed: d.tag || '' }), seen(null)]))
+    .catch(err => Promise.all([tell({ pushed: d.tag || '', err: String(err) }), seen(String(err))])));
 });
 
 self.addEventListener('notificationclick', e => {

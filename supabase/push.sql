@@ -169,7 +169,7 @@ begin
   return jsonb_build_object(
     'steve', (select count(*) from sc_push_subs where who = 'steve'),
     'chlo', (select count(*) from sc_push_subs where who = 'chlo'),
-    'mine', (select jsonb_build_object('who', who, 'ok', last_ok, 'err', last_err) from sc_push_subs where endpoint = p_endpoint));
+    'mine', (select jsonb_build_object('who', who, 'ok', last_ok, 'err', last_err, 'seen', last_seen) from sc_push_subs where endpoint = p_endpoint));
 end $$;
 
 revoke all on function public.sc_push_kick(), public.sc_push_tick(), public.sc_push_take(text), public.sc_push_result(jsonb)
@@ -183,3 +183,16 @@ grant execute on function public.sc_push_save(text,text,text,jsonb), public.sc_p
 
 -- Every minute. To pause all reminders: select cron.unschedule('sc-push');
 select cron.schedule('sc-push', '* * * * *', 'select public.sc_push_tick()');
+
+-- Phones report back when a push arrives (sw.js calls this), so "not delivered" and "hidden" can be told apart.
+alter table public.sc_push_subs add column if not exists last_seen timestamptz;
+alter table public.sc_push_subs add column if not exists seen_err text;
+create or replace function public.sc_push_seen(p_endpoint text, p_err text default null) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  -- The endpoint is a long unguessable URL only that phone knows, so it acts as its own key.
+  update sc_push_subs set last_seen = now(), seen_err = left(p_err, 200) where endpoint = p_endpoint;
+end $$;
+revoke all on function public.sc_push_seen(text, text) from public;
+grant execute on function public.sc_push_seen(text, text) to anon, authenticated;
+-- sc_push_phones also returns 'seen' (last_seen) for this phone since 22 Nov.

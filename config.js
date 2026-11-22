@@ -2,7 +2,7 @@
 // Both values are meant to be public. The tables allow no direct access at all:
 // every read and write goes through database functions that check the shared code,
 // and the code lives (hashed) in Supabase, never in this repo.
-window.SC_CONFIG = {
+self.SC_CONFIG = {  // `self` so the service worker (sw.js) can read it too
   supabaseUrl: "https://hlmxrxqddorntteyqowu.supabase.co",
   supabaseKey: "sb_publishable_5RWyiLiVkVbA6buHPtBtfg_hdV5JxxN",
   // Public half of the push (VAPID) key. The private half is an Edge Function secret in Supabase.
