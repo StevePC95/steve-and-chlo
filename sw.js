@@ -7,13 +7,20 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { title: e.data ? e.data.text() : '' }; }
   const title = d.title || 'Steve & Chlo';
-  e.waitUntil(self.registration.showNotification(title, {
+  const opts = {
     body: d.body || '',
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
-    tag: d.tag || undefined,
     data: { url: d.url || '#today' },
-  }));
+  };
+  // Same tag replaces the old one; renotify makes it pop up and buzz again instead of swapping silently.
+  if (d.tag) { opts.tag = d.tag; opts.renotify = true; }
+  // Tell any open copy of the app that the push arrived (or why it could not be shown).
+  const tell = msg => self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(list => list.forEach(c => c.postMessage(msg)));
+  e.waitUntil(self.registration.showNotification(title, opts)
+    .then(() => tell({ pushed: d.tag || '' }))
+    .catch(err => tell({ pushed: d.tag || '', err: String(err) })));
 });
 
 self.addEventListener('notificationclick', e => {

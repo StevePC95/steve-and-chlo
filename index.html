@@ -919,13 +919,15 @@ $('rem-form').addEventListener('submit',e=>{e.preventDefault();const v=$('r-text
   $('r-text').value='';add('reminders',{t:v,note:'',date:d,time:t,who:remWho,rep:$('r-rep').value,off:false,go:'',last:'',atMs:Date.now(),by:me||''})});
 
 // This phone's push switch.
-const PUSH={ok:'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,sub:null,info:null,msg:'',busy:false,ready:false};
+const PUSH={ok:'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,sub:null,info:null,msg:'',busy:false,ready:false,wait:0};
 const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const HOME=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
 function u8(b64){const s=(b64+'==='.slice((b64.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/'),bin=atob(s),o=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)o[i]=bin.charCodeAt(i);return o}
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('sw.js').then(reg=>reg.pushManager?reg.pushManager.getSubscription():null).then(s=>{PUSH.sub=s||null}).catch(()=>{}).then(()=>{PUSH.ready=true;pushSync()});
-  navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go)location.hash=e.data.go});
+  navigator.serviceWorker.addEventListener('message',e=>{const m=e.data||{};if(m.go)location.hash=m.go;
+    if('pushed' in m&&String(m.pushed).indexOf('sc-test')===0&&PUSH.wait){clearTimeout(PUSH.wait);PUSH.wait=0;
+      PUSH.msg=m.err?'The test reached this phone but could not be shown ('+m.err+').':'The test reached this phone. If nothing popped up, this phone is hiding notifications from the app: check its notification settings.';renderPush()}});
 }else PUSH.ready=true;
 function pushSync(){renderPush();if(!PUSH.sub||!code)return Promise.resolve();
   const j=PUSH.sub.toJSON();
@@ -937,11 +939,13 @@ function pushOn(){if(!me){PUSH.msg='Tap Steve or Chlo at the top first.';return 
   Promise.resolve(Notification.requestPermission()).then(p=>{if(p!=='granted')throw new Error(p==='denied'?'denied':'skipped');return navigator.serviceWorker.ready})
     .then(reg=>reg.pushManager.getSubscription().then(s=>s||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(CFG.vapidKey)})))
     .then(s=>{PUSH.sub=s;const j=s.toJSON();return rpc('sc_push_save',{p_code:code,p_who:me,p_endpoint:j.endpoint,p_keys:j.keys}).then(()=>rpc('sc_push_test',{p_code:code,p_endpoint:j.endpoint}))})
-    .then(()=>{PUSH.msg='Done. A test push is on its way.'})
+    .then(()=>{PUSH.msg='Done. A test push is on its way.';pushWait()})
     .catch(err=>{PUSH.msg=err&&err.message==='denied'?'':err&&err.message==='skipped'?'Tap Allow when your phone asks.':'That did not work. Check your signal and try again.'})
     .then(()=>{PUSH.busy=false;pushSync()})}
 function pushTest(){if(!PUSH.sub)return;PUSH.busy=true;renderPush();
-  rpc('sc_push_test',{p_code:code,p_endpoint:PUSH.sub.endpoint}).then(()=>{PUSH.msg='Test sent. It should pop up in a few seconds.'}).catch(()=>{PUSH.msg='That did not send. Check your signal and try again.'}).then(()=>{PUSH.busy=false;renderPush()})}
+  rpc('sc_push_test',{p_code:code,p_endpoint:PUSH.sub.endpoint}).then(()=>{PUSH.msg='Test sent. It should pop up in a few seconds.';pushWait()}).catch(()=>{PUSH.msg='That did not send. Check your signal and try again.'}).then(()=>{PUSH.busy=false;renderPush()})}
+function pushWait(){clearTimeout(PUSH.wait);PUSH.wait=setTimeout(()=>{PUSH.wait=0;
+  PUSH.msg='The server sent it, but this phone has not received it after 25 seconds. Tap Turn off, then turn reminders on again. If that does not help, tell Claude which phone and browser this is.';renderPush()},25000)}
 function pushOff(){const s=PUSH.sub;if(!s)return;const ep=s.endpoint;
   Promise.resolve(s.unsubscribe()).catch(()=>{}).then(()=>rpc('sc_push_drop',{p_code:code,p_endpoint:ep})).catch(()=>{}).then(()=>{PUSH.sub=null;PUSH.info=null;PUSH.msg='Reminders are off on this phone.';renderPush()})}
 function renderPush(){const box=$('push-card');if(!box)return;box.textContent='';
