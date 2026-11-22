@@ -14,6 +14,9 @@ Our home app: tonight's dinner, the week's meals, a shopping list that builds it
 | `config.js` | Public Supabase URL and key |
 | `manifest.webmanifest`, `icons/` | Makes it installable |
 | `supabase/setup.sql` | Creates the database table and functions |
+| `supabase/push.sql` | Push reminders: tables, schedule (runs after setup.sql) |
+| `supabase/functions/sc-push/` | Edge Function that sends the pushes |
+| `sw.js` | Shows push reminders on the phone |
 | `supabase/seed.sql` | Starter meals, house jobs and date ideas |
 
 ## Notes

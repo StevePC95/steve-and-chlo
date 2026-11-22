@@ -408,6 +408,31 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
     </form>
     <p class="muted small">Tap Done and the clock restarts. Nobody has to remember when it was last done.</p>
   </div>
+
+  <div class="head" id="reminders"><h2>Reminders</h2><span class="eyebrow" id="rem-count">Pushed to your phones</span></div>
+  <div class="card" id="push-card"></div>
+  <div class="card">
+    <ul class="list" id="rem-list"></ul>
+    <form id="rem-form" style="display:flex;flex-direction:column;gap:10px">
+      <input class="in" id="r-text" placeholder="What should the push say?" autocomplete="off" maxlength="80" required style="flex:none">
+      <div class="row">
+        <input class="in" id="r-date" type="date" aria-label="Date (first time)" required>
+        <input class="in sm" id="r-time" type="time" aria-label="Time" required value="17:00" style="flex:1 1 110px">
+      </div>
+      <div class="row" style="align-items:center">
+        <div class="seg" id="r-who" role="group" aria-label="Who gets it">
+          <button type="button" data-v="steve" aria-pressed="false">Steve</button>
+          <button type="button" data-v="chlo" aria-pressed="false">Chlo</button>
+          <button type="button" data-v="both" aria-pressed="true">Both</button>
+        </div>
+        <select class="in sm" id="r-rep" aria-label="Repeats" style="flex:1 1 130px">
+          <option value="">Once</option><option value="day">Every day</option><option value="week" selected>Every week</option><option value="month">Every month</option>
+        </select>
+        <button class="btn" type="submit">Add</button>
+      </div>
+      <p class="muted small" id="r-hint" style="margin:0"></p>
+    </form>
+  </div>
 </section>
 
 <section data-view="us" hidden>
@@ -468,8 +493,8 @@ const AISLES=['Fruit & Veg','Meat & Deli','Dairy & Eggs','Bakery','Pantry','Froz
 const UNITS=['g','ml','each','tin','jar','pack','bunch','clove','slice','head','sachet','piece'];
 const NAME={steve:'Steve',chlo:'Chlo',both:'Both'};
 const INIT={steve:'S',chlo:'C',both:'S+C'};
-const S={meals:[],plan:{},ticks:{},extras:[],todos:[],chores:[],ideas:[],notes:[],counts:[],events:[]};
-let me=null,filter='mine',newWho='both',evWho='both',loaded={};
+const S={meals:[],plan:{},ticks:{},extras:[],todos:[],chores:[],ideas:[],notes:[],counts:[],events:[],reminders:[]};
+let me=null,filter='mine',newWho='both',evWho='both',remWho='both',loaded={};
 try{me=localStorage.getItem('sc-me')}catch(e){}
 if(me!=='steve'&&me!=='chlo')me=null;
 
@@ -486,7 +511,7 @@ const other=()=>me==='steve'?'chlo':me==='chlo'?'steve':'both';
 let toastT;
 function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},5000)}
 const CFG=window.SC_CONFIG||{};
-const KINDS=['meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events'];
+const KINDS=['meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events','reminders'];
 let R={},lastRaw='',pending=0,queue=Promise.resolve(),code=null;
 KINDS.forEach(k=>{R[k]={}});
 try{code=localStorage.getItem('sc-code')}catch(e){}
@@ -858,7 +883,85 @@ $('ev-form').addEventListener('submit',e=>{e.preventDefault();const v=$('ev-text
   calSel=d;calY=+d.slice(0,4);calM=+d.slice(5,7)-1;
   add('events',{t:v,date:d,time:t,who:evWho,rep:r,atMs:Date.now(),by:me||''})});
 
-function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal();renderRecipes()}
+
+/* ---- Reminders (push) ---- */
+// A reminder: {t, note, date 'YYYY-MM-DD' (first time), time 'HH:MM', who, rep: ''|day|week|month, off, go '#hash', last}
+// Supabase works out when each one is due (Johannesburg time) and pushes it; see supabase/push.sql.
+const WDAY=['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'];
+const ord=n=>n+(n%100>10&&n%100<14?'th':['th','st','nd','rd'][n%10]||'th');
+function remOn(r,ds){if(!r.date||ds<r.date)return false;if(!r.rep)return ds===r.date;if(r.rep==='day')return true;
+  if(r.rep==='week')return occurs({date:r.date,rep:'week'},ds);
+  if(r.rep==='month'){const b=new Date(ds+'T12:00:00'),last=new Date(b.getFullYear(),b.getMonth()+1,0).getDate();return b.getDate()===Math.min(+r.date.slice(8),last)}
+  return false}
+function remNext(r){if(r.off)return null;const now=new Date(),hm=pad(now.getHours())+':'+pad(now.getMinutes()),base=new Date(today()+'T12:00:00');
+  for(let i=0;i<=62;i++){const ds=ymd(new Date(base.getTime()+i*864e5));if(remOn(r,ds)&&(i>0||(r.time||'00:00')>hm))return {ds,i}}return null}
+function remRule(r){const t=r.time||'';if(r.rep==='day')return 'Every day '+t;
+  if(r.rep==='week')return WDAY[new Date(r.date+'T12:00:00').getDay()]+' '+t;
+  if(r.rep==='month')return 'Monthly on the '+ord(+String(r.date).slice(8))+' '+t;
+  return 'Once, '+nice(r.date)+' '+t}
+function renderRems(){
+  const ul=$('rem-list');ul.textContent='';
+  const list=S.reminders.map(r=>Object.assign({},r,{_n:remNext(r)})).sort((a,b)=>(a._n?0:1)-(b._n?0:1)||(a._n&&b._n?(a._n.ds+a.time).localeCompare(b._n.ds+b.time):0)||String(a.t).localeCompare(String(b.t)));
+  $('rem-count').textContent=S.reminders.length?S.reminders.filter(r=>!r.off).length+' on':'Pushed to your phones';
+  if(!list.length)ul.append(h('li',{class:'empty',text:loaded.reminders?'No reminders yet. Add one below.':'Loading…'}));
+  list.forEach(r=>{const n=r._n,gone=!r.off&&!n;
+    const next=r.off?'Paused':gone?'Sent':n.i===0?'Next: today '+r.time:n.i===1?'Next: tomorrow '+r.time:'Next: '+nice(n.ds);
+    ul.append(h('li',{class:gone?'done':''},h('div',{class:'tx'},h('b',{text:r.t}),h('small',{text:remRule(r)+' · '+next})),av(r.who||'both'),
+      gone?null:h('button',{type:'button',class:'del',text:r.off?'Resume':'Pause',onclick:()=>upd('reminders',r._id,{off:!r.off})}),
+      armBtn('×',()=>del('reminders',r._id))))});
+  renderRemHint()}
+function renderRemHint(){const d=$('r-date').value,t=$('r-time').value,rep=$('r-rep').value;
+  $('r-hint').textContent=!d||!t?'':(rep?'Repeats: '+remRule({date:d,time:t,rep}).replace('Every day','every day')+'.':'One push on '+nice(d)+' at '+t+'.')+' Goes to '+(remWho==='both'?'both of you':NAME[remWho])+'.'}
+seg('r-who',()=>remWho,v=>{remWho=v;renderRemHint()});
+['r-date','r-time','r-rep'].forEach(id=>$(id).addEventListener('input',renderRemHint));
+$('r-date').value=today();
+$('rem-form').addEventListener('submit',e=>{e.preventDefault();const v=$('r-text').value.trim(),d=$('r-date').value,t=$('r-time').value;if(!v||!d||!t)return;
+  $('r-text').value='';add('reminders',{t:v,note:'',date:d,time:t,who:remWho,rep:$('r-rep').value,off:false,go:'',last:'',atMs:Date.now(),by:me||''})});
+
+// This phone's push switch.
+const PUSH={ok:'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window,sub:null,info:null,msg:'',busy:false,ready:false};
+const IOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const HOME=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+function u8(b64){const s=(b64+'==='.slice((b64.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/'),bin=atob(s),o=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)o[i]=bin.charCodeAt(i);return o}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>reg.pushManager?reg.pushManager.getSubscription():null).then(s=>{PUSH.sub=s||null}).catch(()=>{}).then(()=>{PUSH.ready=true;pushSync()});
+  navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.go)location.hash=e.data.go});
+}else PUSH.ready=true;
+function pushSync(){renderPush();if(!PUSH.sub||!code)return Promise.resolve();
+  const j=PUSH.sub.toJSON();
+  return rpc('sc_push_phones',{p_code:code,p_endpoint:j.endpoint}).then(info=>{PUSH.info=info;
+    if(me&&(!info.mine||info.mine.who!==me))return rpc('sc_push_save',{p_code:code,p_who:me,p_endpoint:j.endpoint,p_keys:j.keys}).then(()=>rpc('sc_push_phones',{p_code:code,p_endpoint:j.endpoint})).then(i=>{PUSH.info=i})
+  }).catch(()=>{}).then(renderPush)}
+function pushOn(){if(!me){PUSH.msg='Tap Steve or Chlo at the top first.';return renderPush()}
+  PUSH.busy=true;PUSH.msg='';renderPush();
+  Promise.resolve(Notification.requestPermission()).then(p=>{if(p!=='granted')throw new Error(p==='denied'?'denied':'skipped');return navigator.serviceWorker.ready})
+    .then(reg=>reg.pushManager.getSubscription().then(s=>s||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(CFG.vapidKey)})))
+    .then(s=>{PUSH.sub=s;const j=s.toJSON();return rpc('sc_push_save',{p_code:code,p_who:me,p_endpoint:j.endpoint,p_keys:j.keys}).then(()=>rpc('sc_push_test',{p_code:code,p_endpoint:j.endpoint}))})
+    .then(()=>{PUSH.msg='Done. A test push is on its way.'})
+    .catch(err=>{PUSH.msg=err&&err.message==='denied'?'':err&&err.message==='skipped'?'Tap Allow when your phone asks.':'That did not work. Check your signal and try again.'})
+    .then(()=>{PUSH.busy=false;pushSync()})}
+function pushTest(){if(!PUSH.sub)return;PUSH.busy=true;renderPush();
+  rpc('sc_push_test',{p_code:code,p_endpoint:PUSH.sub.endpoint}).then(()=>{PUSH.msg='Test sent. It should pop up in a few seconds.'}).catch(()=>{PUSH.msg='That did not send. Check your signal and try again.'}).then(()=>{PUSH.busy=false;renderPush()})}
+function pushOff(){const s=PUSH.sub;if(!s)return;const ep=s.endpoint;
+  Promise.resolve(s.unsubscribe()).catch(()=>{}).then(()=>rpc('sc_push_drop',{p_code:code,p_endpoint:ep})).catch(()=>{}).then(()=>{PUSH.sub=null;PUSH.info=null;PUSH.msg='Reminders are off on this phone.';renderPush()})}
+function renderPush(){const box=$('push-card');if(!box)return;box.textContent='';
+  const say=(b,t)=>box.append(h('div',{class:'tx'},h('b',{text:b}),t?h('p',{class:'muted small',style:'margin:4px 0 0',text:t}):null));
+  if(!PUSH.ready)return say('Checking this phone…');
+  if(!PUSH.ok){if(IOS&&!HOME)return say('Reminders need the Home Screen app','In Safari tap Share → Add to Home Screen, then open Steve & Chlo from your Home Screen and come back here.');
+    return say('This browser cannot get push reminders','Try the app from your phone’s Home Screen.')}
+  if(Notification.permission==='denied')return say('Notifications are blocked for this app','iPhone: Settings → Notifications → Steve & Chlo → Allow Notifications. Then come back here.');
+  const other=me==='steve'?'chlo':'steve',inf=PUSH.info;
+  if(!PUSH.sub){say('This phone is not getting reminders yet',me?'One tap, then allow notifications. Do this once on each phone.':'Tap Steve or Chlo at the top first, so this phone gets the right ones.');
+    box.append(h('button',{type:'button',class:'btn',disabled:PUSH.busy||!me,text:PUSH.busy?'Turning on…':'Turn on reminders on this phone',onclick:pushOn}))}
+  else{const who=inf&&inf.mine?inf.mine.who:me;
+    say('On for '+(NAME[who]||'this phone')+' on this phone',inf&&me&&!inf[other]?NAME[other]+' has not turned them on yet. Do it on their phone too.':inf&&me?NAME[other]+' is on too.':'');
+    if(inf&&inf.mine&&inf.mine.err)box.append(h('p',{class:'small',style:'margin:0;color:var(--bad)',text:'Last push to this phone failed. Tap Send a test; if it still fails, turn reminders off and on again.'}));
+    box.append(h('div',{class:'row',style:'align-items:center'},h('button',{type:'button',class:'btn ghost',disabled:PUSH.busy,text:'Send a test',onclick:pushTest}),armBtn('Turn off',pushOff)))}
+  if(PUSH.msg)box.append(h('p',{class:'small',style:'margin:0',text:PUSH.msg}))}
+document.querySelectorAll('.who button').forEach(b=>b.addEventListener('click',()=>{PUSH.msg='';pushSync()}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&PUSH.sub)pushSync()});
+
+function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal();renderRecipes();renderRems();renderPush()}
 renderAll();
 
 /* ---- connect ---- */
@@ -882,7 +985,7 @@ function showGate(mode,msg){gateMode=mode;gate.hidden=false;nav.hidden=true;view
   $('gate-h').textContent=mode==='setup'?'Choose your shared code':'Enter your shared code';
   $('gate-p').textContent=mode==='setup'?'First time here. Pick a code of at least 6 characters that only the two of you know. Both phones use the same one.':'This app is just for the two of you. Enter the code once and this phone remembers it.';
   $('gate-btn').textContent=mode==='setup'?'Set code':'Unlock';$('gate-msg').textContent=msg||''}
-function unlock(c){code=c;try{localStorage.setItem('sc-code',c)}catch(e){}gate.hidden=true;nav.hidden=false;show();refresh()}
+function unlock(c){code=c;try{localStorage.setItem('sc-code',c)}catch(e){}gate.hidden=true;nav.hidden=false;show();refresh();if(PUSH.ready)pushSync()}
 function lockOut(msg){code=null;try{localStorage.removeItem('sc-code')}catch(e){}lastRaw='';KINDS.forEach(k=>{R[k]={}});rebuild();showGate('enter',msg)}
 $('gate-form').addEventListener('submit',e=>{e.preventDefault();const c=$('gate-in').value;if(c.length<6){$('gate-msg').textContent='Use at least 6 characters.';return}
   const b=$('gate-btn');b.disabled=true;$('gate-msg').textContent='';
