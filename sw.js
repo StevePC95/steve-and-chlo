@@ -11,7 +11,7 @@ self.addEventListener('push', e => {
   const opts = {
     body: d.body || '',
     icon: 'icons/icon-192.png',
-    badge: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',  // Android status bar: white on transparent only
     data: { url: d.url || '#today' },
   };
   // Same tag replaces the old one; renotify makes it pop up and buzz again instead of swapping silently.
