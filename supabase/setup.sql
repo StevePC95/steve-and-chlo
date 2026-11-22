@@ -13,7 +13,7 @@ create table if not exists public.sc_secret (
 alter table public.sc_secret enable row level security;
 
 create table if not exists public.sc_items (
-  kind text not null check (kind in ('meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events')),
+  kind text not null check (kind in ('meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events')),  -- push.sql widens this (reminders, meta)
   id text not null check (length(id) between 1 and 100),
   data jsonb not null default '{}'::jsonb check (pg_column_size(data) < 20000),
   updated_at timestamptz not null default now(),

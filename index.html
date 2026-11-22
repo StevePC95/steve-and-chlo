@@ -23,6 +23,7 @@
   --band:#1f44b8; --band-2:#17348f; --band-ink:#f4f7ff;
   --steve:#1f44b8; --steve-soft:#e3e9fb; --chlo:#d63f26; --chlo-soft:#fde6e1; --on:#ffffff;
   --butter:#ffe27a; --butter-ink:#3a2f08;
+  --paper:#fdfcf7; --paper-ink:#2f2a22; --paper-line:#c9c2b4; --tape:rgba(255,226,122,.78);
   --good:#1c7a52; --good-soft:#dff3ea; --warn:#8a5a00; --warn-soft:#fdf0cf; --bad:#b3261e; --bad-soft:#fbe4e1;
   --f-d:"Bricolage Grotesque","Arial Narrow",system-ui,sans-serif;
   --f-b:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -223,6 +224,43 @@ nav.tabs a[aria-current="page"]::before{content:"";position:absolute;top:0;left:
 .tbar a span:last-child{font-variant-numeric:tabular-nums}
 textarea.in{min-height:180px;resize:vertical;line-height:1.45}
 .toast{position:fixed;left:16px;right:16px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:9;max-width:608px;margin:0 auto;background:var(--bad);color:#fff;padding:12px 14px;border-radius:12px;font-size:.92rem;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+/* Our photo: a print taped to the fridge. Paper stays light in dark mode, like a real photo. */
+.snap{--w:112px;--tilt:-2.5deg;position:relative;display:block;width:var(--w);flex:0 0 auto;background:var(--paper);color:var(--paper-ink);
+  padding:6px 6px 24px;border:0;border-radius:3px;transform:rotate(var(--tilt));cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.18),0 10px 22px rgba(21,35,59,.16)}
+.snap::before{content:"";position:absolute;top:-10px;left:50%;width:44%;height:18px;transform:translateX(-50%) rotate(3deg);background:var(--tape);box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.snap img,.snap .ph{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:1px}
+.snap .ph{display:grid;place-items:center;text-align:center;border:1.5px dashed var(--paper-line);font:600 .78rem/1.25 var(--f-b);padding:6px;color:var(--paper-ink)}
+.snap .cap{position:absolute;left:4px;right:4px;bottom:2px;text-align:center;font:700 1.15rem/1.1 var(--f-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snap.big{--w:min(220px,62vw);--tilt:1.5deg;margin:14px auto 4px;padding-bottom:34px}
+.snap.big .cap{font-size:1.6rem;bottom:4px}
+.snap.sm{--w:84px;padding:5px 5px 18px}
+.snap.sm .cap{font-size:.95rem}
+/* Sunday reset */
+.rs-top{display:flex;align-items:center;gap:18px;padding-top:10px}
+.rs-top h2{font:800 clamp(1.9rem,8vw,2.4rem)/1 var(--f-d);letter-spacing:-.02em}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.steps button{width:100%;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:6px 0 4px;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 .72rem/1.1 var(--f-b);min-height:44px}
+.steps b{display:grid;place-items:center;width:26px;height:26px;border-radius:999px;border:1.5px solid var(--line-2);font:800 .82rem/1 var(--f-d);font-variant-numeric:tabular-nums}
+.steps button[aria-current="step"]{color:var(--ink)}
+.steps button[aria-current="step"] b{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.steps button.done b{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.rs-nav{display:flex;gap:10px;justify-content:space-between;position:sticky;bottom:calc(84px + env(safe-area-inset-bottom,0px));padding:10px 0;background:linear-gradient(transparent,var(--bg) 30%)}
+.rs-nav .btn{flex:1}
+.rs-nav .btn.ghost{flex:0 0 auto}
+.wk li{align-items:center}
+.wk .dd{font:800 1rem/1 var(--f-d);min-width:58px}
+.wk .dd small{display:block;font:500 .78rem/1.3 var(--f-b);color:var(--muted)}
+.pill.busy{background:var(--chlo-soft);color:var(--chlo)}
+.rs-sum{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;text-align:center}
+.rs-sum li{font-size:.98rem}
+.rs-sum b{font:800 1.1rem/1 var(--f-d)}
+.reset-cta{flex-direction:row;align-items:center;gap:16px}
+.reset-cta .tx{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}
+.reset-cta .tx b{font:800 1.35rem/1.05 var(--f-d)}
+.reset-cta .btn{align-self:flex-start;text-decoration:none}
+.planned{display:inline-flex;align-items:center;gap:6px;color:var(--good);font-weight:700}
+
 @media (prefers-reduced-motion: no-preference){
   section[data-view]:not([hidden]){animation:rise .2s ease-out}
   @keyframes rise{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -256,6 +294,7 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
 
 <section data-view="today">
   <div class="head"><h2 id="hello">Today</h2><span class="status" id="status">Loading</span></div>
+  <div class="card reset-cta" id="today-reset"></div>
   <div class="card" id="today-events" hidden></div>
   <div class="tonight" id="tonight"></div>
   <div class="tiles" id="tiles"></div>
@@ -273,6 +312,17 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
   </div>
   <div class="card" id="today-note" hidden></div>
   <button class="del" type="button" id="lock" style="align-self:center">Lock this phone</button>
+</section>
+
+
+<section data-view="reset" hidden>
+  <div class="rs-top">
+    <span id="rs-snap"></span>
+    <div><h2>Sunday reset</h2><p class="muted small" id="rs-week" style="margin-top:6px"></p></div>
+  </div>
+  <ol class="steps" id="rs-steps" aria-label="Steps"></ol>
+  <div id="rs-body" style="display:flex;flex-direction:column;gap:12px"></div>
+  <div class="rs-nav"><button class="btn ghost" type="button" id="rs-back">Back</button><button class="btn" type="button" id="rs-next">Next</button></div>
 </section>
 
 <section data-view="calendar" hidden>
@@ -436,6 +486,8 @@ textarea.in{min-height:180px;resize:vertical;line-height:1.45}
 </section>
 
 <section data-view="us" hidden>
+  <div class="head"><h2>Our photo</h2><span class="eyebrow">This phone only</span></div>
+  <div class="card reset-cta" id="photo-card"></div>
   <div class="head"><h2>On the fridge</h2><span class="eyebrow">Notes to each other</span></div>
   <div class="fridge" id="notes"></div>
   <div class="card">
@@ -493,7 +545,7 @@ const AISLES=['Fruit & Veg','Meat & Deli','Dairy & Eggs','Bakery','Pantry','Froz
 const UNITS=['g','ml','each','tin','jar','pack','bunch','clove','slice','head','sachet','piece'];
 const NAME={steve:'Steve',chlo:'Chlo',both:'Both'};
 const INIT={steve:'S',chlo:'C',both:'S+C'};
-const S={meals:[],plan:{},ticks:{},extras:[],todos:[],chores:[],ideas:[],notes:[],counts:[],events:[],reminders:[]};
+const S={meals:[],plan:{},ticks:{},extras:[],todos:[],chores:[],ideas:[],notes:[],counts:[],events:[],reminders:[],meta:{}};
 let me=null,filter='mine',newWho='both',evWho='both',remWho='both',loaded={};
 try{me=localStorage.getItem('sc-me')}catch(e){}
 if(me!=='steve'&&me!=='chlo')me=null;
@@ -511,7 +563,7 @@ const other=()=>me==='steve'?'chlo':me==='chlo'?'steve':'both';
 let toastT;
 function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{t.hidden=true},5000)}
 const CFG=window.SC_CONFIG||{};
-const KINDS=['meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events','reminders'];
+const KINDS=['meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events','reminders','meta'];
 let R={},lastRaw='',pending=0,queue=Promise.resolve(),code=null;
 KINDS.forEach(k=>{R[k]={}});
 try{code=localStorage.getItem('sc-code')}catch(e){}
@@ -520,7 +572,7 @@ function rpc(fn,args){
     .then(r=>r.json().catch(()=>null).then(j=>{if(!r.ok){const e=new Error((j&&j.message)||'failed');e.code=(j&&j.message)||'';throw e}return j}));
 }
 function rebuild(){
-  KINDS.forEach(k=>{if(k==='plan'||k==='ticks'){const o={};Object.keys(R[k]).forEach(id=>{o[id]=Object.assign({},R[k][id],{_id:id})});S[k]=o}
+  KINDS.forEach(k=>{if(k==='plan'||k==='ticks'||k==='meta'){const o={};Object.keys(R[k]).forEach(id=>{o[id]=Object.assign({},R[k][id],{_id:id})});S[k]=o}
     else S[k==='counts'?'counts':k]=Object.keys(R[k]).map(id=>Object.assign({},R[k][id],{_id:id}))});
 }
 function fail(e){if(e&&e.code==='bad_code'){lockOut('That code no longer works. Enter the current one.');return}
@@ -545,8 +597,8 @@ function show(){if(!$('gate').hidden)return;let v=(location.hash||'#today').slic
   cookId=v==='recipes'&&parts[1]?decodeURIComponent(parts.slice(1).join('/')):null;
   if(!views.some(x=>x.dataset.view===v))v='today';
   views.forEach(x=>{x.hidden=x.dataset.view!==v});
-  const tab=v==='shop'||v==='recipes'?'meals':v;links.forEach(a=>{if(a.getAttribute('href')==='#'+tab)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}
-window.addEventListener('hashchange',()=>{show();renderRecipes();window.scrollTo(0,0)});show();
+  const tab=v==='shop'||v==='recipes'?'meals':v==='reset'?'today':v;links.forEach(a=>{if(a.getAttribute('href')==='#'+tab)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')})}
+window.addEventListener('hashchange',()=>{show();renderRecipes();if(typeof renderReset==='function')renderReset();window.scrollTo(0,0)});show();
 
 /* ---- who ---- */
 function renderWho(){document.querySelectorAll('.who button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.who===me?'true':'false'))}
@@ -591,7 +643,7 @@ function renderToday(){
   else{const nxt=DAYS.map(d=>({d,m:S.plan[d.k]&&mealById(S.plan[d.k].meal)})).find(x=>x.m&&DKEY.indexOf(x.d.k)>new Date().getDay());
     tn.append(h('b',{text:dk==='sat'||dk==='sun'?'Weekend. No plan needed.':'Nothing planned'}),h('span',{text:nxt?'Next up: '+nxt.m.name+' on '+nxt.d.n:'The week is still empty.'}))}
   if(meal&&(meal.steps||[]).length)tn.append(h('a',{href:'#recipes/'+encodeURIComponent(meal._id),text:'Cook it step by step'}));
-  tn.append(h('a',{href:'#meals',text:meal?'See the week':'Plan the week'}));
+  const wkDone=meal||isPlanned();tn.append(h('a',{href:wkDone?'#meals':'#reset',text:wkDone?'See the week':'Plan the week'}));
   const open=openTodos().filter(mine),late=open.filter(t=>t.due&&daysTo(t.due)<=0).length;
   const items=shopItems(),left=items.filter(i=>!S.ticks[i.key]).length+S.extras.filter(x=>!x.done).length;
   const chDue=S.chores.filter(c=>choreDue(c)<=0).length;
@@ -611,19 +663,20 @@ function renderToday(){
 }
 
 /* ---- Meals ---- */
-function renderPlan(){
-  const box=$('plan');box.textContent='';const dk=DKEY[new Date().getDay()];
+function planRows(box,prefix,opt){opt=opt||{};box.textContent='';const dk=DKEY[new Date().getDay()];
   const sorted=S.meals.slice().sort((a,b)=>String(a.name).localeCompare(String(b.name)));
   let n=0;
-  DAYS.forEach(d=>{const p=S.plan[d.k]||{};if(p.meal&&mealById(p.meal))n++;
-    const sel=h('select',{id:'plan-'+d.k,'aria-label':d.n+' meal',onchange:()=>{if(!sel.value)del('plan',d.k);else put('plan',d.k,{meal:sel.value,cook:p.cook||'',cooked:false})}},
-      h('option',{value:'',text:'Pick a meal'}),sorted.map(m=>h('option',{value:m._id,text:m.name,selected:m._id===p.meal})));
+  DAYS.forEach((d,i)=>{const p=S.plan[d.k]||{};if(p.meal&&mealById(p.meal))n++;
+    const sel=h('select',{id:prefix+d.k,'aria-label':d.n+' meal',onchange:()=>{if(!sel.value)del('plan',d.k);else put('plan',d.k,{meal:sel.value,cook:p.cook||'',cooked:false})}},
+      h('option',{value:'',text:'Pick a meal'}),sorted.map(m=>h('option',{value:m._id,text:m.name+(opt.busy&&opt.busy[i]&&m.mins&&m.mins<=30?' (quick)':''),selected:m._id===p.meal})));
     const cook=av(p.cook,'button');cook.type='button';cook.setAttribute('aria-label','Who cooks '+d.n);cook.disabled=!p.meal;
     cook.addEventListener('click',()=>{const nx=p.cook==='steve'?'chlo':p.cook==='chlo'?'':'steve';put('plan',d.k,{meal:p.meal,cook:nx,cooked:!!p.cooked})});
-    const ck=h('input',{type:'checkbox',class:'ck',checked:!!p.cooked,disabled:!p.meal,'aria-label':d.n+' cooked',onchange:()=>{put('plan',d.k,{meal:p.meal,cook:p.cook||'',cooked:ck.checked});if(ck.checked)upd('meals',p.meal,{last:today()})}});
-    box.append(h('div',{class:'day'+(d.k===dk?' today':'')},h('span',{class:'dn',text:d.n}),sel,cook,ck))});
-  $('plan-count').textContent=n+' of 5 picked';
-}
+    const ck=opt.noTick?h('span'):h('input',{type:'checkbox',class:'ck',checked:!!p.cooked,disabled:!p.meal,'aria-label':d.n+' cooked',onchange:()=>{put('plan',d.k,{meal:p.meal,cook:p.cook||'',cooked:ck.checked});if(ck.checked)upd('meals',p.meal,{last:today()})}});
+    const dn=h('span',{class:'dn',text:d.n});
+    box.append(h('div',{class:'day'+(!opt.busy&&d.k===dk?' today':'')},dn,sel,cook,ck));
+    if(opt.busy&&opt.busy[i])box.append(h('p',{class:'small',style:'margin:-2px 0 4px 52px;color:var(--chlo)',text:'Busy evening: pick something quick.'}))});
+  return n}
+function renderPlan(){const n=planRows($('plan'),'plan-');$('plan-count').textContent=n+' of 5 picked'}
 /* A–Z index shared by the meal library and the recipe book */
 const byName=(a,b)=>String(a.name).localeCompare(String(b.name));
 const letterOf=s=>{const c=String(s||'').trim().charAt(0).toUpperCase();return c>='A'&&c<='Z'?c:'#'};
@@ -669,15 +722,20 @@ $('m-more').addEventListener('click',ingRow);
 $('meal-form').addEventListener('submit',e=>{e.preventDefault();const name=$('m-name').value.trim();if(!name)return;
   const ings=[...$('m-ings').children].map(r=>{const f=r.querySelectorAll('input,select');return {n:f[0].value.trim(),q:Number(f[1].value)||0,u:f[2].value,a:f[3].value}}).filter(i=>i.n);
   add('meals',{name,type:$('m-type').value,mins:Number($('m-mins').value)||0,rating:0,last:'',ings,atMs:Date.now()}).then(()=>{$('meal-form').reset();$('m-ings').textContent='';for(let i=0;i<4;i++)ingRow()})});
-$('suggest').addEventListener('click',()=>{
+function suggest5(btn,busy){
   if(S.meals.length<1)return toast('Add some meals first.');
   const scored=S.meals.filter(m=>m.type!=='Treat').map(m=>({m,s:(m.last?Math.min(60,-daysTo(m.last)):45)+(m.rating||3)*6+Math.random()*25})).sort((a,b)=>b.s-a.s);
   const pick=[],types={};
   scored.forEach(x=>{if(pick.length>=5)return;const t=x.m.type||'Other';if((types[t]||0)>=2)return;types[t]=(types[t]||0)+1;pick.push(x.m)});
   scored.forEach(x=>{if(pick.length<5&&!pick.includes(x.m))pick.push(x.m)});
-  const btn=$('suggest');btn.disabled=true;let i=0;
+  // Busy evenings get the quickest of the five.
+  if(busy&&busy.some(Boolean)){const quick=pick.slice().sort((a,b)=>(a.mins||60)-(b.mins||60)),slot=[];
+    DAYS.forEach((d,j)=>{if(busy[j]&&quick.length){const m=quick.shift();slot[j]=m;pick.splice(pick.indexOf(m),1)}});
+    DAYS.forEach((d,j)=>{if(!slot[j])slot[j]=pick.shift()});pick.splice(0,pick.length,...slot.filter(Boolean))}
+  btn.disabled=true;let i=0;
   (function next(){if(i>=DAYS.length||i>=pick.length){btn.disabled=false;return}const d=DAYS[i],m=pick[i++];put('plan',d.k,{meal:m._id,cook:(S.plan[d.k]||{}).cook||'',cooked:false}).then(next)})();
-});
+}
+$('suggest').addEventListener('click',()=>suggest5($('suggest')));
 
 /* ---- Recipe book + cook mode (steps live on the meal: steps:[{t,m}], m = minutes for a timer) ---- */
 const fmt=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+pad(s%60)};
@@ -753,18 +811,20 @@ $('rb-q').addEventListener('input',renderRecipes);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){wl=null;renderRecipes()}});
 
 /* ---- Shop ---- */
-function renderShop(){
-  const items=shopItems(),box=$('shop-list');box.textContent='';
-  const planned=DAYS.filter(d=>S.plan[d.k]&&mealById(S.plan[d.k].meal)).length;
-  $('shop-from').textContent='From '+planned+' meal'+(planned===1?'':'s');
-  if(!items.length)box.append(h('p',{class:'empty'},'Pick meals for the week and the list builds itself. ',h('a',{href:'#meals',text:'Plan the week'})));
+function shopListInto(box,items){box.textContent='';
   AISLES.forEach(a=>{const g=items.filter(i=>i.a===a);if(!g.length)return;
     box.append(h('h3',{class:'aisle',text:a}));
     const ul=h('ul',{class:'list'});
     g.forEach(i=>{const on=!!S.ticks[i.key];
       const cb=h('input',{type:'checkbox',class:'ck',checked:on,'aria-label':i.n,onchange:()=>{if(cb.checked)put('ticks',i.key,{done:true});else del('ticks',i.key)}});
       ul.append(h('li',{class:on?'done':''},cb,h('div',{class:'tx'},h('b',{text:i.n}),h('small',{text:i.from.join(', ')})),h('span',{class:'qty',text:qty(i)})))});
-    box.append(ul)});
+    box.append(ul)})}
+function renderShop(){
+  const items=shopItems(),box=$('shop-list');box.textContent='';
+  const planned=DAYS.filter(d=>S.plan[d.k]&&mealById(S.plan[d.k].meal)).length;
+  $('shop-from').textContent='From '+planned+' meal'+(planned===1?'':'s');
+  if(!items.length)box.append(h('p',{class:'empty'},'Pick meals for the week and the list builds itself. ',h('a',{href:'#meals',text:'Plan the week'})));
+  else shopListInto(box,items);
   const ex=$('extra-list');ex.textContent='';
   S.extras.slice().sort((a,b)=>(a.atMs||0)-(b.atMs||0)).forEach(x=>{
     const cb=h('input',{type:'checkbox',class:'ck',checked:!!x.done,'aria-label':x.n,onchange:()=>upd('extras',x._id,{done:cb.checked})});
@@ -781,8 +841,9 @@ $('copy-list').addEventListener('click',()=>{const items=shopItems().filter(i=>!
 (function(){const b=$('new-week');let t;b.addEventListener('click',()=>{
   if(!b.classList.contains('arm')){b.classList.add('arm');b.textContent='Tap again to clear the week';t=setTimeout(()=>{b.classList.remove('arm');b.textContent='Start a new week'},4000);return}
   clearTimeout(t);b.disabled=true;
-  const jobs=[].concat(DAYS.filter(d=>S.plan[d.k]).map(d=>['plan',d.k]),Object.keys(S.ticks).map(k=>['ticks',k]),S.extras.filter(x=>x.done).map(x=>['extras',x._id]));
-  let i=0;(function next(){if(i>=jobs.length){b.disabled=false;b.classList.remove('arm');b.textContent='Start a new week';return}const j=jobs[i++];del(j[0],j[1]).then(next)})()})})();
+  clearWeek(()=>{b.disabled=false;b.classList.remove('arm');b.textContent='Start a new week'})})})();
+function clearWeek(done){const jobs=[].concat(DAYS.filter(d=>S.plan[d.k]).map(d=>['plan',d.k]),Object.keys(S.ticks).map(k=>['ticks',k]),S.extras.filter(x=>x.done).map(x=>['extras',x._id]));
+  let i=0;(function next(){if(i>=jobs.length){if(done)done();return}const j=jobs[i++];del(j[0],j[1]).then(next)})()}
 
 /* ---- To-do + chores ---- */
 function seg(id,get,set){const box=$(id);const paint=()=>box.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===get()?'true':'false'));
@@ -965,7 +1026,102 @@ function renderPush(){const box=$('push-card');if(!box)return;box.textContent=''
 document.querySelectorAll('.who button').forEach(b=>b.addEventListener('click',()=>{PUSH.msg='';pushSync()}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&PUSH.sub)pushSync()});
 
-function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal();renderRecipes();renderRems();renderPush()}
+
+/* ---- Our photo (stays on this phone: localStorage 'sc-photo', never uploaded) ---- */
+let PHOTO=null;try{PHOTO=localStorage.getItem('sc-photo')}catch(e){}
+const photoIn=h('input',{type:'file',accept:'image/*',hidden:true,'aria-hidden':'true'});document.body.append(photoIn);
+function pickPhoto(){photoIn.value='';photoIn.click()}
+photoIn.addEventListener('change',()=>{const f=photoIn.files&&photoIn.files[0];if(!f)return;
+  const url=URL.createObjectURL(f),img=new Image();
+  img.onload=()=>{const sc=Math.min(1,900/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
+    const d=c.toDataURL('image/jpeg',.82);try{localStorage.setItem('sc-photo',d);PHOTO=d}catch(e){toast('That photo is too big to keep on this phone. Try a different one.');return}
+    renderAll()};
+  img.onerror=()=>{URL.revokeObjectURL(url);toast('That file could not be opened as a photo. Try a different one.')};
+  img.src=url});
+// A print taped to the fridge. size: '', 'sm' or 'big'.
+function snap(size,cap){const b=h('button',{type:'button',class:'snap'+(size?' '+size:''),'aria-label':PHOTO?'Change our photo':'Choose our photo',onclick:pickPhoto},
+    PHOTO?h('img',{src:PHOTO,alt:'Steve and Chlo'}):h('span',{class:'ph',text:'Tap to add our photo'}),h('span',{class:'cap',text:cap||'us'}));return b}
+function renderPhotoCard(){const box=$('photo-card');box.textContent='';
+  box.append(snap('',PHOTO?'us':''),h('div',{class:'tx'},h('span',{class:'small muted',text:PHOTO?'Shows on Today and in the Sunday reset. Tap the photo to change it.':'Pick a photo of the two of you. It stays on this phone and is never uploaded, so set it on each phone.'}),
+    PHOTO?armBtn('Remove photo',()=>{try{localStorage.removeItem('sc-photo')}catch(e){}PHOTO=null;renderAll()}):h('button',{type:'button',class:'btn',text:'Choose our photo',onclick:pickPhoto})))}
+
+/* ---- Sunday reset: plan the week in five steps ---- */
+const RS=[{k:'week',n:'The week'},{k:'dinners',n:'Dinners'},{k:'shop',n:'Shopping'},{k:'todos',n:'To-dos'},{k:'done',n:'Done'}];
+// The week being planned: next Monday on Sat/Sun, otherwise this Monday.
+function planMon(){const t=new Date(today()+'T12:00:00'),g=t.getDay();t.setDate(t.getDate()+(g===6?2:g===0?1:1-g));return ymd(t)}
+const addDays=(ds,n)=>{const t=new Date(ds+'T12:00:00');t.setDate(t.getDate()+n);return ymd(t)};
+const weekOf=mon=>'Week of '+new Date(mon+'T12:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+const isPlanned=()=>{const w=S.meta.week;return !!(w&&w.mon===planMon())};
+function busyDays(){const mon=planMon();return [0,1,2,3,4,5,6].map(i=>{const ev=eventsOn(addDays(mon,i));return ev.length>=2||ev.some(e=>(e.time||'')>='16:00')})}
+let rs={mon:'',at:0};try{rs=JSON.parse(localStorage.getItem('sc-rs')||'{}')||rs}catch(e){}
+function rsGo(i){rs={mon:planMon(),at:Math.max(0,Math.min(RS.length-1,i))};try{localStorage.setItem('sc-rs',JSON.stringify(rs))}catch(e){}renderReset();window.scrollTo(0,0)}
+function renderReset(){const sec=document.querySelector('section[data-view="reset"]');if(!sec||sec.hidden)return;
+  // Don't wipe something half-typed when the other phone changes data.
+  const ae=document.activeElement;if(ae&&ae.tagName==='INPUT'&&ae.value&&$('rs-body').contains(ae))return;
+  const mon=planMon();if(rs.mon!==mon)rs={mon,at:0};const at=rs.at||0;
+  $('rs-snap').textContent='';$('rs-snap').append(snap('sm',new Date(mon+'T12:00:00').toLocaleDateString('en-ZA',{day:'numeric',month:'short'})));
+  $('rs-week').textContent=weekOf(mon)+(isPlanned()?'. Already planned.':'. About 10 minutes.');
+  const st=$('rs-steps');st.textContent='';
+  RS.forEach((x,i)=>st.append(h('li',null,h('button',{type:'button',class:i<at?'done':'','aria-current':i===at?'step':null,onclick:()=>rsGo(i)},h('b',{text:i<at?'✓':String(i+1)}),x.n))));
+  const body=$('rs-body');body.textContent='';const busy=busyDays();const out=(...k)=>body.append(...k.filter(Boolean));
+  const card=(...k)=>h('div',{class:'card'},...k),hint=t=>h('p',{class:'muted small',text:t});
+  if(RS[at].k==='week'){
+    const ul=h('ul',{class:'list wk'});
+    for(let i=0;i<7;i++){const ds=addDays(mon,i),ev=eventsOn(ds),d=new Date(ds+'T12:00:00');
+      ul.append(h('li',null,h('span',{class:'dd'},d.toLocaleDateString('en-ZA',{weekday:'short'}),h('small',{text:d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})})),
+        h('div',{class:'tx'},ev.length?ev.map(e=>h('span',{text:(e.time?e.time+' ':'')+e.t+(e.who&&e.who!=='both'&&NAME[e.who]?' ('+NAME[e.who]+')':'')})):h('span',{class:'muted',text:'Nothing on'})),
+        busy[i]?h('span',{class:'pill busy',text:'Busy'}):null))}
+    out(hint('Look at what is coming up. Busy evenings get quick dinners in the next step.'),card(ul),
+      h('a',{href:'#calendar',class:'small',style:'align-self:flex-start;color:var(--muted)',text:'Something missing? Add it on the Calendar, then come back here from Today.'}))}
+  if(RS[at].k==='dinners'){
+    const box=h('div');const n=planRows(box,'rs-plan-',{busy:busy.slice(0,5),noTick:true});
+    const old=DAYS.some(d=>S.plan[d.k]&&S.plan[d.k].cooked)||Object.keys(S.ticks).length>0;
+    const sug=h('button',{type:'button',class:'btn',text:n?'Suggest 5 again':'Suggest 5 for us',onclick:()=>suggest5(sug,busy.slice(0,5))});
+    out(hint('Pick five dinners and tap the circle to say who cooks. Suggest 5 fills the week for you.'),
+      old?card(h('span',{class:'small',text:"Last week's plan is still here."}),armBtn("Clear last week's plan",()=>clearWeek())):null,
+      card(box,h('div',{class:'row'},sug)),hint(n+' of 5 picked.'))}
+  if(RS[at].k==='shop'){
+    const items=shopItems(),box=h('div');
+    if(items.length)shopListInto(box,items);else box.append(h('p',{class:'empty',text:'No dinners picked yet, so the list is empty. Go back a step and pick some.'}));
+    const ex=h('form',{class:'row'},h('input',{class:'in',placeholder:'Also need… e.g. coffee',maxlength:'60','aria-label':'Also need'}),h('button',{class:'btn ghost',type:'submit',text:'Add'}));
+    ex.addEventListener('submit',e=>{e.preventDefault();const i=ex.querySelector('input'),v=i.value.trim();if(!v)return;i.value='';add('extras',{n:v,done:false,atMs:Date.now(),by:me||''})});
+    const extras=S.extras.filter(x=>!x.done);
+    out(hint('Tick off anything already in the cupboard. What is left is your shopping list.'),card(box),
+      card(h('span',{class:'small',text:extras.length?'Also on the list: '+extras.map(x=>x.n).join(', '):'Anything else for the shop?'}),ex))}
+  if(RS[at].k==='todos'){
+    const open=openTodos(),ul=h('ul',{class:'list'});
+    if(!open.length)ul.append(h('li',{class:'empty',text:'Nothing open. Add anything this week needs.'}));
+    open.forEach(t=>ul.append(todoRow(t)));
+    const f=h('form',{class:'row'},h('input',{class:'in',placeholder:'This week we need to…',maxlength:'140','aria-label':'New to-do'}),h('button',{class:'btn ghost',type:'submit',text:'Add'}));
+    f.addEventListener('submit',e=>{e.preventDefault();const i=f.querySelector('input'),v=i.value.trim();if(!v)return;i.value='';add('todos',{t:v,who:'both',due:'',done:false,doneMs:0,atMs:Date.now(),by:me||''})});
+    const chDue=S.chores.filter(c=>choreDue(c)<=0).length;
+    out(hint('Tick off what is done and add anything this week needs.'),card(ul,f),
+      chDue?h('a',{href:'#todo',class:'small',style:'align-self:flex-start;color:var(--muted)',text:chDue+' house job'+(chDue===1?' is':'s are')+' due too. See them on To-do.'}):null)}
+  if(RS[at].k==='done'){
+    const planned=DAYS.map(d=>S.plan[d.k]).filter(p=>p&&mealById(p.meal)),cs=planned.filter(p=>p.cook==='steve').length,cc=planned.filter(p=>p.cook==='chlo').length;
+    const items=shopItems(),left=items.filter(i=>!S.ticks[i.key]).length+S.extras.filter(x=>!x.done).length,todo=openTodos().length,nb=busy.filter(Boolean).length;
+    const w=S.meta.week;
+    out(snap('big',weekOf(mon).replace('Week of ','week of ')),
+      h('ul',{class:'rs-sum'},
+        h('li',null,h('b',{text:planned.length+' of 5'}),' dinners planned'+(cs||cc?' (Steve cooks '+cs+', Chlo '+cc+')':planned.length?'. Nobody picked to cook yet.':'')),
+        h('li',null,h('b',{text:String(left)}),' thing'+(left===1?'':'s')+' to buy'),
+        h('li',null,h('b',{text:String(todo)}),' to-do'+(todo===1?'':'s')+' open'),
+        nb?h('li',null,h('b',{text:String(nb)}),' busy evening'+(nb===1?'':'s')):null),
+      isPlanned()?h('p',{class:'planned',style:'align-self:center',text:'✓ Planned'+(w.by&&NAME[w.by]?' by '+NAME[w.by]:'')}):
+        h('button',{type:'button',class:'btn',style:'align-self:center;min-width:220px',text:'Finish: our week is planned',onclick:()=>{put('meta','week',{mon,by:me||'',atMs:Date.now()});location.hash='#today'}}))}
+  const back=$('rs-back'),next=$('rs-next');
+  back.textContent=at?'Back':'Close';back.onclick=()=>{if(at)rsGo(at-1);else location.hash='#today'};
+  next.hidden=at===RS.length-1;next.textContent='Next: '+(RS[at+1]?RS[at+1].n:'');next.onclick=()=>rsGo(at+1)}
+function renderTodayReset(){const box=$('today-reset');if(!box)return;box.textContent='';
+  const mon=planMon(),w=S.meta.week,g=new Date().getDay(),wknd=g===0||g===6;
+  if(isPlanned()){box.append(snap('sm','us'),h('div',{class:'tx'},h('span',{class:'planned',text:'✓ '+weekOf(mon)+' is planned'}),
+      h('span',{class:'small muted',text:w.by&&NAME[w.by]?'By '+NAME[w.by]+'. ':'Nice work. '},h('a',{href:'#reset',style:'color:inherit',text:'Open the reset'}))));return}
+  box.append(snap('sm','us'),h('div',{class:'tx'},h('b',{text:wknd?'Sunday reset':'This week is not planned yet'}),
+    h('span',{class:'small muted',text:'Dinners, shopping and to-dos for the '+weekOf(mon).replace('Week','week')+'. About 10 minutes.'}),
+    h('a',{class:'btn',href:'#reset',text:'Plan the week'})))}
+
+function renderAll(){renderWho();renderToday();renderPlan();renderMeals();renderShop();renderTodos();renderChores();renderNotes();renderIdeas();renderCounts();renderCal();renderRecipes();renderRems();renderPush();renderReset();renderTodayReset();renderPhotoCard()}
 renderAll();
 
 /* ---- connect ---- */

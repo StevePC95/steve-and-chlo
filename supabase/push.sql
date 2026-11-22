@@ -244,3 +244,60 @@ begin
 end $$;
 revoke all on function public.sc_push_test(text, text, int) from public;
 grant execute on function public.sc_push_test(text, text, int) to anon, authenticated;
+-- Sunday reset (22 Nov 2026): kind 'meta' holds shared one-off state, e.g. id 'week' = {mon: 'YYYY-MM-DD', by, atMs}
+-- (the Monday of the week that has been planned). A reminder with go '#reset' is skipped once that week is planned.
+alter table public.sc_items drop constraint if exists sc_items_kind_check;
+alter table public.sc_items add constraint sc_items_kind_check check (kind in
+  ('meals','plan','ticks','extras','todos','chores','ideas','notes','counts','events','reminders','meta'));
+
+create or replace function public.sc_push_tick() returns int
+language plpgsql security definer set search_path = public as $$
+declare
+  loc timestamp := now() at time zone 'Africa/Johannesburg';
+  d date := (now() at time zone 'Africa/Johannesburg')::date;
+  -- The week being planned: next Monday on Sat/Sun, else this Monday.
+  wk date := case when extract(isodow from (now() at time zone 'Africa/Johannesburg')::date) >= 6
+                  then (now() at time zone 'Africa/Johannesburg')::date + (8 - extract(isodow from (now() at time zone 'Africa/Johannesburg')::date)::int)
+                  else (now() at time zone 'Africa/Johannesburg')::date - (extract(isodow from (now() at time zone 'Africa/Johannesburg')::date)::int - 1) end;
+  planned boolean;
+  r record; st date; t time; occ timestamp; k text; n int := 0; c int;
+begin
+  select exists (select 1 from sc_items where kind = 'meta' and id = 'week' and data->>'mon' = to_char(wk, 'YYYY-MM-DD')) into planned;
+  for r in select id, data from sc_items where kind = 'reminders' for update loop
+    continue when coalesce(r.data->>'off', '') in ('true', '1');
+    begin
+      st := (r.data->>'date')::date; t := (r.data->>'time')::time;
+    exception when others then continue;
+    end;
+    continue when st is null or t is null;
+    case coalesce(r.data->>'rep', '')
+      when '' then occ := st + t;
+      when 'day' then occ := d + t;
+        if occ > loc then occ := occ - interval '1 day'; end if;
+      when 'week' then occ := (d - ((extract(dow from d)::int - extract(dow from st)::int + 7) % 7)) + t;
+        if occ > loc then occ := occ - interval '7 days'; end if;
+      when 'month' then occ := sc_month_day(d, extract(day from st)::int) + t;
+        if occ > loc then occ := sc_month_day((date_trunc('month', d) - interval '1 day')::date, extract(day from st)::int) + t; end if;
+      else continue;
+    end case;
+    continue when occ > loc or occ <= loc - interval '2 hours' or occ::date < st;
+    k := to_char(occ, 'YYYY-MM-DD"T"HH24:MI');
+    continue when coalesce(r.data->>'last', '') >= k;
+    update sc_items set data = data || jsonb_build_object('last', k), updated_at = now()
+      where kind = 'reminders' and id = r.id;
+    -- The Sunday reset nudge stays quiet if the week is already planned.
+    continue when r.data->>'go' = '#reset' and planned;
+    insert into sc_push_out (endpoint, keys, payload)
+      select s.endpoint, s.keys, jsonb_build_object(
+        'title', coalesce(nullif(r.data->>'t', ''), 'Reminder'),
+        'body', coalesce(r.data->>'note', ''),
+        'url', coalesce(nullif(r.data->>'go', ''), '#today'),
+        'tag', 'sc-' || r.id)
+      from sc_push_subs s
+      where coalesce(r.data->>'who', 'both') not in ('steve', 'chlo') or s.who = r.data->>'who';
+    get diagnostics c = row_count; n := n + c;
+  end loop;
+  if exists (select 1 from sc_push_out) then perform sc_push_kick(); end if;
+  return n;
+end $$;
+revoke all on function public.sc_push_tick() from public, anon, authenticated;
