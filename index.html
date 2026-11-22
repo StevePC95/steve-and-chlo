@@ -943,9 +943,9 @@ function pushOn(){if(!me){PUSH.msg='Tap Steve or Chlo at the top first.';return 
     .catch(err=>{PUSH.msg=err&&err.message==='denied'?'':err&&err.message==='skipped'?'Tap Allow when your phone asks.':'That did not work. Check your signal and try again.'})
     .then(()=>{PUSH.busy=false;pushSync()})}
 function pushTest(){if(!PUSH.sub)return;PUSH.busy=true;renderPush();
-  rpc('sc_push_test',{p_code:code,p_endpoint:PUSH.sub.endpoint}).then(()=>{PUSH.msg='Test sent. It should pop up in a few seconds.';pushWait()}).catch(()=>{PUSH.msg='That did not send. Check your signal and try again.'}).then(()=>{PUSH.busy=false;renderPush()})}
-function pushWait(){clearTimeout(PUSH.wait);PUSH.wait=setTimeout(()=>{PUSH.wait=0;
-  PUSH.msg='The server sent it, but this phone has not received it after 25 seconds. Tap Turn off, then turn reminders on again. If that does not help, tell Claude which phone and browser this is.';renderPush()},25000)}
+  rpc('sc_push_test',{p_code:code,p_endpoint:PUSH.sub.endpoint,p_delay:10}).then(()=>{PUSH.msg='Arrives in 10 seconds. Lock your phone or go to your home screen now to see how it shows up.';pushWait(40)}).catch(()=>{PUSH.msg='That did not send. Check your signal and try again.'}).then(()=>{PUSH.busy=false;renderPush()})}
+function pushWait(secs){secs=secs||25;clearTimeout(PUSH.wait);PUSH.wait=setTimeout(()=>{PUSH.wait=0;
+  PUSH.msg='The server sent it, but this phone has not received it after '+secs+' seconds. Tap Turn off, then turn reminders on again. If that does not help, tell Claude which phone and browser this is.';renderPush()},secs*1000)}
 function pushOff(){const s=PUSH.sub;if(!s)return;const ep=s.endpoint;
   Promise.resolve(s.unsubscribe()).catch(()=>{}).then(()=>rpc('sc_push_drop',{p_code:code,p_endpoint:ep})).catch(()=>{}).then(()=>{PUSH.sub=null;PUSH.info=null;PUSH.msg='Reminders are off on this phone.';renderPush()})}
 function renderPush(){const box=$('push-card');if(!box)return;box.textContent='';
@@ -960,7 +960,7 @@ function renderPush(){const box=$('push-card');if(!box)return;box.textContent=''
   else{const who=inf&&inf.mine?inf.mine.who:me;
     say('On for '+(NAME[who]||'this phone')+' on this phone',inf&&me&&!inf[other]?NAME[other]+' has not turned them on yet. Do it on their phone too.':inf&&me?NAME[other]+' is on too.':'');
     if(inf&&inf.mine&&inf.mine.err)box.append(h('p',{class:'small',style:'margin:0;color:var(--bad)',text:'Last push to this phone failed. Tap Send a test; if it still fails, turn reminders off and on again.'}));
-    box.append(h('div',{class:'row',style:'align-items:center'},h('button',{type:'button',class:'btn ghost',disabled:PUSH.busy,text:'Send a test',onclick:pushTest}),armBtn('Turn off',pushOff)))}
+    box.append(h('div',{class:'row',style:'align-items:center'},h('button',{type:'button',class:'btn ghost',disabled:PUSH.busy,text:'Send a test in 10 s',onclick:pushTest}),armBtn('Turn off',pushOff)))}
   if(PUSH.msg)box.append(h('p',{class:'small',style:'margin:0',text:PUSH.msg}))}
 document.querySelectorAll('.who button').forEach(b=>b.addEventListener('click',()=>{PUSH.msg='';pushSync()}));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&PUSH.sub)pushSync()});

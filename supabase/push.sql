@@ -196,3 +196,51 @@ end $$;
 revoke all on function public.sc_push_seen(text, text) from public;
 grant execute on function public.sc_push_seen(text, text) to anon, authenticated;
 -- sc_push_phones also returns 'seen' (last_seen) for this phone since 22 Nov.
+
+-- 22 Nov: "Send a test" waits 10 s (so the phone can be locked first). Queue rows carry send_after;
+-- sc_push_kick(p_delay) tells the Edge Function to wait before taking the queue.
+alter table public.sc_push_out add column if not exists send_after timestamptz not null default now();
+drop function if exists public.sc_push_kick();
+create or replace function public.sc_push_kick(p_delay int default 0) returns void
+language plpgsql security definer set search_path = public as $$
+declare k text;
+begin
+  select decrypted_secret into k from vault.decrypted_secrets where name = 'sc_cron_key';
+  if k is null then return; end if;
+  perform net.http_post(
+    url := 'https://hlmxrxqddorntteyqowu.supabase.co/functions/v1/sc-push',
+    body := jsonb_build_object('delay', greatest(0, least(coalesce(p_delay, 0), 20))),
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-sc-key', k),
+    timeout_milliseconds := 45000);
+end $$;
+revoke all on function public.sc_push_kick(int) from public, anon, authenticated;
+
+create or replace function public.sc_push_take(p_key text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare out jsonb; k text; v text;
+begin
+  select decrypted_secret into k from vault.decrypted_secrets where name = 'sc_cron_key';
+  if k is null or p_key is distinct from k then raise exception 'bad_key'; end if;
+  select decrypted_secret into v from vault.decrypted_secrets where name = 'sc_vapid';
+  delete from sc_push_out where created_at < now() - interval '2 hours';
+  with t as (delete from sc_push_out where id > 0 and send_after <= now() returning endpoint, keys, payload)  -- PostgREST needs a WHERE
+  select coalesce(jsonb_agg(jsonb_build_object('endpoint', endpoint, 'keys', keys, 'payload', payload)), '[]'::jsonb) into out from t;
+  return jsonb_build_object('jobs', out, 'vapid', v::jsonb);
+end $$;
+
+drop function if exists public.sc_push_test(text, text);
+create or replace function public.sc_push_test(p_code text, p_endpoint text, p_delay int default 0) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare s record; dl int := greatest(0, least(coalesce(p_delay, 0), 20));
+begin
+  if not sc_ok(p_code) then raise exception 'bad_code' using errcode = '28P01'; end if;
+  select * into s from sc_push_subs where endpoint = p_endpoint;
+  if not found then return false; end if;
+  insert into sc_push_out (endpoint, keys, payload, send_after) values (s.endpoint, s.keys, jsonb_build_object(
+    'title', 'Reminders are on', 'body', 'This phone will get ' || initcap(s.who) || '''s reminders.', 'url', '#todo', 'tag', 'sc-test'),
+    now() + make_interval(secs => dl));
+  perform sc_push_kick(dl);
+  return true;
+end $$;
+revoke all on function public.sc_push_test(text, text, int) from public;
+grant execute on function public.sc_push_test(text, text, int) to anon, authenticated;

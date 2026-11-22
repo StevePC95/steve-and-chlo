@@ -19,6 +19,10 @@ async function rpc(fn: string, args: unknown = {}) {
 Deno.serve(async (req) => {
   const key = req.headers.get('x-sc-key') || '';
   if (!key) return new Response('no', { status: 401 });
+  // A delayed test ("Send a test" waits so the phone can be locked first): wait, then send.
+  let delay = 0;
+  try { delay = Math.min(20, Math.max(0, Number((await req.json())?.delay) || 0)); } catch (_) { /* no body */ }
+  if (delay) await new Promise((r) => setTimeout(r, delay * 1000 + 800));
   let take: { jobs: { endpoint: string; keys: { p256dh: string; auth: string }; payload: Record<string, unknown> }[]; vapid: { jwk: JsonWebKey; pub: string } };
   try {
     take = await rpc('sc_push_take', { p_key: key });
